@@ -22,7 +22,7 @@ A single-user full-stack workout logging application.
 
 \- backend/ - Express API
 
-## Design
+\## Design
 Pre-implementation planning and design decisions are documented in `/docs/project-plan.md`.
 
 \## Notes
