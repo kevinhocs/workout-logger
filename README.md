@@ -2,8 +2,14 @@
 
 
 
-A single-user full-stack workout logging application.
+A single-user full-stack workout logging application focused on correctness, input validation, and realistic domain constraints rather than UI complexity.
 
+## What it does
+
+- Logs workouts composed of exercises, sets, reps, and weight
+- Enforces basic domain constraints (valid ranges, required fields)
+- Validates input before persistence
+- Stores and retrieves workout data via a REST API
 
 
 \## Tech Stack
@@ -22,10 +28,11 @@ A single-user full-stack workout logging application.
 
 \- backend/ - Express API
 
-\## Design
+\## Design Notes
+
 Pre-implementation planning and design decisions are documented in `/docs/project-plan.md`.
 
 \## Notes
 
-This project is intended as a portfolio piece demonstrating core full-stack fundamentals.
+This project is intended as a portfolio piece demonstrating core full-stack fundamentals, including state management, validation, and backend API design.
 
