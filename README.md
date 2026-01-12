@@ -14,21 +14,21 @@ A single-user full-stack workout logging application focused on correctness, inp
 
 ## Tech Stack
 
-\- Frontend: React
+- Frontend: React
 
-\- Backend: Node.js, Express
+- Backend: Node.js, Express
 
-\- API: REST (JSON)
+- API: REST (JSON)
 
 
 
 ## Structure
 
-\- frontend/ - React client
+- frontend/ - React client
 
-\- backend/ - Express API
+- backend/ - Express API
 
-\## Design Notes
+## Design
 
 Pre-implementation planning and design decisions are documented in `/docs/project-plan.md`.
 
