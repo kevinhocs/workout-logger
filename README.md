@@ -1,4 +1,4 @@
-\# Workout Logger
+# Workout Logger
 
 
 
@@ -12,7 +12,7 @@ A single-user full-stack workout logging application focused on correctness, inp
 - Stores and retrieves workout data via a REST API
 
 
-\## Tech Stack
+## Tech Stack
 
 \- Frontend: React
 
@@ -22,7 +22,7 @@ A single-user full-stack workout logging application focused on correctness, inp
 
 
 
-\## Structure
+## Structure
 
 \- frontend/ - React client
 
@@ -32,7 +32,7 @@ A single-user full-stack workout logging application focused on correctness, inp
 
 Pre-implementation planning and design decisions are documented in `/docs/project-plan.md`.
 
-\## Notes
+## Notes
 
 This project is intended as a portfolio piece demonstrating core full-stack fundamentals, including state management, validation, and backend API design.
 
