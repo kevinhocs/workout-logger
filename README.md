@@ -24,9 +24,9 @@ A single-user full-stack workout logging application focused on correctness, inp
 
 ## Structure
 
-- Frontend: - React client
+- Frontend: React client
 
-- Backend: - Express API
+- Backend: Express API
 
 ## Design
 
