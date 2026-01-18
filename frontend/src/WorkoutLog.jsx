@@ -52,10 +52,10 @@ export default function WorkoutLog() {
     }
 
     // Required fields
-    if (!form.exercise .trim() === "") errors.exercise = "Exercise selection is required!";
-    if (!form.weight === "") errors.weight = "Weight value is required!";
-    if (!form.reps === "") errors.reps = "Reps value is required!";
-    if (!form.sets === "") errors.sets = "Sets value is required!";
+    if (form.exercise .trim() === "") errors.exercise = "Exercise selection is required!";
+    if (form.weight === "") errors.weight = "Weight value is required!";
+    if (form.reps === "") errors.reps = "Reps value is required!";
+    if (form.sets === "") errors.sets = "Sets value is required!";
 
     // Numeric checks
     if (form.weight !== "" && !/^\d+(\.\d+)?$/.test(form.weight)) {
