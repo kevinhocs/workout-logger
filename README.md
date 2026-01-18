@@ -36,3 +36,23 @@ Pre-implementation planning and design decisions are documented in `/docs/projec
 
 This project is intended as a portfolio piece demonstrating core full-stack fundamentals, including state management, validation, and backend API design.
 
+## How to Run
+
+### Prerequisites
+- Node.js (v18+ recommended)
+- npm
+
+## Backend
+```bash
+cd backend
+npm install
+npm start
+```
+
+## Frontend
+```bash
+cd frontend
+npm install
+npm start
+```
+
