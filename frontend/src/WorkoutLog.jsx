@@ -52,7 +52,7 @@ export default function WorkoutLog() {
     }
 
     // Required fields
-    if (!form.exercise === "") errors.exercise = "Exercise selection is required!";
+    if (!form.exercise .trim() === "") errors.exercise = "Exercise selection is required!";
     if (!form.weight === "") errors.weight = "Weight value is required!";
     if (!form.reps === "") errors.reps = "Reps value is required!";
     if (!form.sets === "") errors.sets = "Sets value is required!";
@@ -184,7 +184,7 @@ export default function WorkoutLog() {
       setLogs((logs) => logs.filter((log) => log.id !== id));
     } catch (err) {
       console.error("Error deleting log:", err);
-      alert("Failed to delete log. Server might be down.");
+      alert(err.message);
     }
   };
 
