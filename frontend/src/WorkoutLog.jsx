@@ -52,10 +52,26 @@ export default function WorkoutLog() {
     }
 
     // Required fields
-    if (form.exercise .trim() === "") errors.exercise = "Exercise selection is required!";
+    if (form.exercise.trim() === "") errors.exercise = "Exercise selection is required!";
     if (form.weight === "") errors.weight = "Weight value is required!";
-    if (form.reps === "") errors.reps = "Reps value is required!";
-    if (form.sets === "") errors.sets = "Sets value is required!";
+
+    // Reps validation
+    if (form.reps === "") {
+      errors.reps = "Reps value is required!";
+    } else if (!/^\d+$/.test(form.reps)) {
+      errors.reps = "Reps must be a whole number.";
+    } else if (Number(form.reps) <= 0) {
+      errors.reps = "Reps must be at least 1.";
+    }
+
+    // Sets validation (single, ordered chain)
+    if (form.sets === "") {
+      errors.sets = "Sets value is required!";
+    } else if (!/^\d+$/.test(form.sets)) {
+      errors.sets = "Sets must be a whole number.";
+    } else if (Number(form.sets) <= 0) {
+      errors.sets = "Sets must be at least 1.";
+    }
 
     // Numeric checks
     if (form.weight !== "" && !/^\d+(\.\d+)?$/.test(form.weight)) {
@@ -129,12 +145,16 @@ export default function WorkoutLog() {
     const inputWeight = Number(form.weight);
     const weightInLbs = unit === "kg" ? round1(toLbs(inputWeight)) : inputWeight;
 
-    const payload = {
-      date: form.date,
+    const updatePayload = {
       exercise: form.exercise,
       reps: Number(form.reps),
       sets: Number(form.sets),
       weight: weightInLbs,
+    };
+
+    const createPayload = {
+      date: form.date,
+      ...updatePayload,
     };
 
     try {
@@ -145,14 +165,14 @@ export default function WorkoutLog() {
         res = await fetch(`http://localhost:3000/logs/${editingLog.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(updatePayload),
         });
       } else {
         // CREATE
         res = await fetch("http://localhost:3000/logs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(createPayload),
         });
       }
 
@@ -181,7 +201,7 @@ export default function WorkoutLog() {
         throw new Error("Failed to delete log");
       }
 
-      setLogs((logs) => logs.filter((log) => log.id !== id));
+      await fetchLogs();
     } catch (err) {
       console.error("Error deleting log:", err);
       alert(err.message);
@@ -189,12 +209,12 @@ export default function WorkoutLog() {
   };
 
   // --- Edit handlers ---
-  const startEdit = (log) => {
+  const startEdit = (log, date) => {
     const displayWeight = unit === "kg" ? round1(toKg(log.weight)) : log.weight;
     setEditingLog(log);
     setErrors({});
     setForm({
-      date: log.date,
+      date,
       exercise: log.exercise,
       weight: String(displayWeight),
       reps: log.reps,
@@ -275,24 +295,29 @@ export default function WorkoutLog() {
       <h2>Logged Workouts</h2>
 
       <div className="log-list">
-        {logs.map((log) => (
-          <div key={log.id} className="log-row">
-            <div className="log-meta">
-              <div className="log-exercise">{log.exercise}</div>
-              <div className="log-details">
-                {log.date} |{" "}
-                {unit === "kg"
-                  ? `${round1(toKg(log.weight))} kg`
-                  : `${log.weight} lbs`}{" "}
-                | {log.reps} {pluralize(Number(log.reps), "rep")} |{" "}
-                {log.sets} {pluralize(Number(log.sets), "set")}
-              </div>
-            </div>
+        {logs.map((session) => (
+          <div key={session.id} className="session">
+            <h3>{session.date}</h3>
 
-            <div className="log-actions">
-              <button onClick={() => startEdit(log)}>Edit</button>
-              <button onClick={() => handleDelete(log.id)}>Delete</button>
-            </div>
+            {session.exercises.map((log) => (
+              <div key={log.id} className="log-row">
+                <div className="log-meta">
+                  <div className="log-exercise">{log.exercise}</div>
+                  <div className="log-details">
+                    {unit === "kg"
+                      ? `${round1(toKg(log.weight))} kg`
+                      : `${log.weight} lbs`}{" "}
+                    | {log.reps} {pluralize(Number(log.reps), "rep")} |{" "}
+                    {log.sets} {pluralize(Number(log.sets), "set")}
+                  </div>
+                </div>
+
+                <div className="log-actions">
+                  <button onClick={() => startEdit(log, session.date)}>Edit</button>
+                  <button onClick={() => handleDelete(log.id)}>Delete</button>
+                </div>
+              </div>
+            ))}
           </div>
         ))}
       </div>
