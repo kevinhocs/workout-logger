@@ -1,6 +1,3 @@
-// Simple Express server for a tiny Gym Tracker API.
-// Good for learning and prototyping; replace with a
-// production-ready structure and persistent DB later.
 const express = require("express");
 const cors = require("cors");
 
@@ -12,7 +9,7 @@ app.use(express.json());
 
 // Temporary in-memory database (resets when the server restarts).
 // For real apps, persist this data in a database instead.
-let workoutLogs = [];
+let sessions = [];
 
 // Health-check / root endpoint
 app.get("/", (req, res) => {
@@ -21,7 +18,7 @@ app.get("/", (req, res) => {
 
 // Return all workout logs
 app.get("/logs", (req, res) => {
-  res.json(workoutLogs);
+  res.json(sessions);
 });
 
 // Create a new workout log. ID is a timestamp string -
@@ -33,45 +30,74 @@ app.post("/logs", (req, res) => {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
+  const d = new Date(date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (isNaN(d.getTime()) || d > today) {
+    return res.status(400).json({ error: "Invalid date" });
+  }
+
   if (
     typeof weight !== "number" ||
     typeof reps !== "number" ||
     typeof sets !== "number" ||
-    weight <= 0 ||
+    weight < 0 ||
     reps <= 0 ||
     sets <= 0
   ) {
     return res.status(400).json({ error: "Invalid numeric values" });
   }
 
-  const log = {
+  const exerciseLog = {
     id: Date.now().toString(),
-    date,
     exercise,
     weight,
     reps,
     sets
   };
 
-  workoutLogs.push(log);
-  res.status(201).json(log);
+   let session = sessions.find((s) => s.date === date);
+
+  if (!session) {
+    session = {
+      id: Date.now().toString(),
+      date,
+      exercises: [],
+    };
+    sessions.push(session);
+  }
+
+  session.exercises.push(exerciseLog);
+
+  res.status(201).json(session);
 });
 
 // Delete a log by id
 app.delete("/logs/:id", (req, res) => {
   const { id } = req.params;
 
-  const before = workoutLogs.length;
-  workoutLogs = workoutLogs.filter(log => log.id !== id);
+  for (let i = 0; i < sessions.length; i++) {
+    const session = sessions[i];
+    const before = session.exercises.length;
 
-  if (workoutLogs.length === before) {
-    return res.status(404).json({ error: "Log not found" });
+    session.exercises = session.exercises.filter(
+      (log) => log.id !== id
+    );
+
+    if (session.exercises.length < before) {
+      if (session.exercises.length === 0) {
+        sessions.splice(i, 1);
+      }
+
+      return res.json({ message: "Log deleted" });
+    }
   }
 
-  res.json({ message: "Log deleted" });
+  res.status(404).json({ error: "Log not found" });
 });
 
-// Update a log by id (partial update supported via spread)
+// Update a log by id
 app.put("/logs/:id", (req, res) => {
   const { id } = req.params;
 
@@ -79,9 +105,15 @@ app.put("/logs/:id", (req, res) => {
     return res.status(400).json({ error: "No update data provided" });
   }
 
-  const allowedFields = ["date", "exercise", "weight", "reps", "sets"];
+  const allowedFields = ["exercise", "weight", "reps", "sets"];
 
-  if ("weight" in req.body && (typeof req.body.weight !== "number" || req.body.weight <= 0)) {
+  for (const key of Object.keys(req.body)) {
+  if (!allowedFields.includes(key)) {
+    return res.status(400).json({ error: `Invalid field: ${key}` });
+  }
+}
+
+  if ("weight" in req.body && (typeof req.body.weight !== "number" || req.body.weight < 0)) {
     return res.status(400).json({ error: "Invalid weight value" });
   }
 
@@ -93,37 +125,18 @@ app.put("/logs/:id", (req, res) => {
     return res.status(400).json({ error: "Invalid sets value" });
   }
 
-  if ("date" in req.body){
-    const d = new Date(req.body.date);
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    if (isNaN(d.getTime()) || d > today) {
-      return res.status(400).json({ error: "Invalid date value" });
+  for (const session of sessions) {
+    const exercise = session.exercises.find(ex => ex.id === id);
+    if (exercise) {
+      Object.assign(exercise, req.body);
+      return res.json(exercise);
     }
   }
 
-    for (const key of Object.keys(req.body)) {
-      if (!allowedFields.includes(key)) {
-        return res.status(400).json({ error: `Invalid field: ${key}` });
-      }
-    }
-
-  let updatedLog = null;
-
-  workoutLogs = workoutLogs.map(log => {
-    if (log.id === id) {
-      updatedLog = { ...log, ...req.body };
-      return updatedLog;
-    }
-    return log;
-  });
-
-  if (!updatedLog) {
-    return res.status(404).json({ error: "Log not found" });
-  }
-
-  res.json(updatedLog);
+  return res.status(404).json({ error: "Log not found" });
 });
+
+// Start the server
 
 const PORT = process.env.PORT || 3000;
 
