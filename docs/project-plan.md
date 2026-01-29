@@ -14,7 +14,7 @@ The goal of the MVP is to provide a minimal and reliable system for recording wo
 - Implement full CRUD functionality for workout entries
 - Maintain a simple and understandable architecture
 - Demonstrate clear separation between frontend and backend
-- Persist workout data across sessions
+- Persist workout data using a relational database
 
 ### Non-Goals
 - User authentication or authorization
@@ -47,18 +47,31 @@ The goal of the MVP is to provide a minimal and reliable system for recording wo
 - Frontend: React single-page application
 - Backend: Node.js with Express
 - API: RESTful JSON-based API
-- Storage: Backend-managed persistent storage
+- Storage: SQLite-based relational database
 
 ## Data Model (Planned)
 
+The application uses a normalized relational data model designed to support
+workout grouping by date, exercise reuse, and efficient querying.
+
 ### Workout
-- id: string (unique identifier)
-- exerciseName: string
-- sets: number
-- reps: number
-- weight: number
-- weightUnit: string ("lbs" or "kg")
-- date: ISO date string
+Represents a single workout session, implicitly created per date.
+- workout_id
+- workout_date (unique)
+
+### Exercise
+Represents a reusable exercise definition.
+- exercise_id
+- name (unique)
+
+### ExerciseLog
+Represents a logged exercise performed during a workout.
+- log_id
+- workout_id (FK)
+- exercise_id (FK)
+- sets
+- reps
+- weight_lbs
 
 ## Actors
 
