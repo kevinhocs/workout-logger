@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const db = require('./db');
 
 const app = express();
 // Enable CORS for local development / frontend access
@@ -8,8 +9,6 @@ app.use(cors());
 app.use(express.json());
 
 // Temporary in-memory database (resets when the server restarts).
-// For real apps, persist this data in a database instead.
-let sessions = [];
 
 // Health-check / root endpoint
 app.get("/", (req, res) => {
@@ -18,7 +17,7 @@ app.get("/", (req, res) => {
 
 // Return all workout logs
 app.get("/logs", (req, res) => {
-  res.json(sessions);
+  
 });
 
 // Create a new workout log. ID is a timestamp string -
@@ -49,28 +48,77 @@ app.post("/logs", (req, res) => {
     return res.status(400).json({ error: "Invalid numeric values" });
   }
 
-  const exerciseLog = {
-    id: Date.now().toString(),
-    exercise,
-    weight,
-    reps,
-    sets
-  };
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION;");
 
-   let session = sessions.find((s) => s.date === date);
+    db.run(
+      "INSERT OR IGNORE INTO workout (workout_date) VALUES (?)",
+      [date],
+      (err) => {
+        if (err) {
+          db.run("ROLLBACK");
+          return res.status(500).json({ error: "Failed to create workout" });
+        }
 
-  if (!session) {
-    session = {
-      id: Date.now().toString(),
-      date,
-      exercises: [],
-    };
-    sessions.push(session);
-  }
+        db.get(
+          "SELECT workout_id FROM workout WHERE workout_date = ?",
+          [date],
+          (err, row) => {
+            if (err || !row) {
+              db.run("ROLLBACK");
+              return res.status(500).json({ error: "Failed to retrieve workout" });
+            }
 
-  session.exercises.push(exerciseLog);
+            const workoutId = row.workout_id;
+            db.run(
+              "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
+              [exercise],
+              (err) => {
+                if (err) {
+                  db.run("ROLLBACK");
+                  return res.status(500).json({ error: "Failed to create exercise" });
+                }
 
-  res.status(201).json(session);
+                db.get(
+                  "SELECT exercise_id FROM exercise WHERE name = ?",
+                  [exercise],
+                  (err, row) => {
+                    if (err || !row) {
+                      db.run("ROLLBACK");
+                      return res.status(500).json({ error: "Failed to retrieve exercise" });
+                    }
+
+                    const exerciseId = row.exercise_id;
+                    db.run(
+                      "INSERT INTO exercise_log (workout_id, exercise_id, weight_lbs, reps, sets) VALUES (?, ?, ?, ?, ?)",
+                      [workoutId, exerciseId, weight, reps, sets],
+                      function (err) {
+                      if (err) {
+                        db.run("ROLLBACK");
+                        return res.status(500).json({ error: "Failed to create exercise log" });
+                      }
+
+                      db.run("COMMIT");
+
+                      res.status(201).json({
+                        id: this.lastID.toString(),
+                        date,
+                        exercise,
+                        weight_lbs: weight,
+                        reps,
+                        sets
+                      });
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+    }
+  );
+});
 });
 
 // Delete a log by id
@@ -108,10 +156,10 @@ app.put("/logs/:id", (req, res) => {
   const allowedFields = ["exercise", "weight", "reps", "sets"];
 
   for (const key of Object.keys(req.body)) {
-  if (!allowedFields.includes(key)) {
-    return res.status(400).json({ error: `Invalid field: ${key}` });
+    if (!allowedFields.includes(key)) {
+      return res.status(400).json({ error: `Invalid field: ${key}` });
+    }
   }
-}
 
   if ("weight" in req.body && (typeof req.body.weight !== "number" || req.body.weight < 0)) {
     return res.status(400).json({ error: "Invalid weight value" });
