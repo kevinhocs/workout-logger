@@ -10,13 +10,14 @@ A single-user full-stack workout logging application focused on correctness, inp
 - Enforces basic domain constraints (valid ranges, required fields)
 - Validates input before persistence
 - Stores and retrieves workout data via a REST API
+- Backend persistence is currently being migrated from in-memory storage to SQLite with a normalized relational schema
 
 
 ## Tech Stack
 
 - Frontend: React
 
-- Backend: Node.js, Express
+- Backend: Node.js, Express (SQLite migration in progress)
 
 - API: REST (JSON)
 
@@ -53,6 +54,6 @@ npm start
 ```bash
 cd frontend
 npm install
-npm run
+npm run dev
 ```
 
