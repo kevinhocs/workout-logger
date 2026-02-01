@@ -8,20 +8,61 @@ app.use(cors());
 // Parse incoming JSON payloads into `req.body`
 app.use(express.json());
 
-// Temporary in-memory database (resets when the server restarts).
+// SQLite-backed persistent using a normalized schema
 
-// Health-check / root endpoint
 app.get("/", (req, res) => {
   res.json({ message: "Gym Tracker API is running" });
 });
 
 // Return all workout logs
 app.get("/logs", (req, res) => {
+  const sql = `
+    SELECT
+    w.workout_id,
+    w.workout_date,
+    l.log_id,
+    e.name AS exercise,
+    l.weight_lbs,
+    l.reps,
+    l.sets
+    FROM workout w
+    JOIN exercise_log l ON w.workout_id = l.workout_id
+    JOIN exercise e ON l.exercise_id = e.exercise_id
+    ORDER BY w.workout_date DESC, l.log_id ASC
+  `;
+
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: "Failed to retrieve logs" });
+    }
+
+    const sessions = {};
+
+    for (const row of rows) {
+      const workoutId = row.workout_id;
+
+      if (!sessions[workoutId]) {
+        sessions[workoutId] = {
+          id: workoutId,
+          date: row.workout_date,
+          exercises: []
+        };
+      }
+
+      sessions[workoutId].exercises.push({
+        id: row.log_id,
+        exercise: row.exercise,
+        weight: row.weight_lbs,
+        reps: row.reps,
+        sets: row.sets
+      });
+    }
   
+    res.json(Object.values(sessions));
+  });
 });
 
-// Create a new workout log. ID is a timestamp string -
-// simple but not collision-proof. Use UUIDs in real apps.
+// Create a new exercise log entry (creates workouts/exercises as needed)
 app.post("/logs", (req, res) => {
   const {date, exercise, weight, reps, sets} = req.body;
 
@@ -125,67 +166,103 @@ app.post("/logs", (req, res) => {
 app.delete("/logs/:id", (req, res) => {
   const { id } = req.params;
 
-  for (let i = 0; i < sessions.length; i++) {
-    const session = sessions[i];
-    const before = session.exercises.length;
-
-    session.exercises = session.exercises.filter(
-      (log) => log.id !== id
-    );
-
-    if (session.exercises.length < before) {
-      if (session.exercises.length === 0) {
-        sessions.splice(i, 1);
+  db.run(
+    "DELETE FROM exercise_log WHERE log_id = ?",
+    [id],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: "Failed to delete log" });
       }
 
-      return res.json({ message: "Log deleted" });
-    }
-  }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: "Log not found" });
+      }
 
-  res.status(404).json({ error: "Log not found" });
+      res.json({ message: "Log deleted successfully" });
+    }
+  );
 });
 
 // Update a log by id
 app.put("/logs/:id", (req, res) => {
   const { id } = req.params;
+  const {exercise, weight, reps, sets} = req.body;
 
-  if (!req.body || Object.keys(req.body).length === 0) {
-    return res.status(400).json({ error: "No update data provided" });
+  if (!exercise || weight == null || reps == null || sets == null) {
+    return res.status(400).json({ error: "Missing required fields" });
   }
 
-  const allowedFields = ["exercise", "weight", "reps", "sets"];
-
-  for (const key of Object.keys(req.body)) {
-    if (!allowedFields.includes(key)) {
-      return res.status(400).json({ error: `Invalid field: ${key}` });
-    }
+  if (
+    typeof weight !== "number" ||
+    typeof reps !== "number" ||
+    typeof sets !== "number" ||
+    weight < 0 ||
+    reps <= 0 ||
+    sets <= 0
+  ) {
+    return res.status(400).json({ error: "Invalid numeric values" });
   }
 
-  if ("weight" in req.body && (typeof req.body.weight !== "number" || req.body.weight < 0)) {
-    return res.status(400).json({ error: "Invalid weight value" });
-  }
+  db.serialize(() => {
+    db.run("BEGIN TRANSACTION;");
 
-  if ("reps" in req.body && (typeof req.body.reps !== "number" || req.body.reps <= 0)) {
-    return res.status(400).json({ error: "Invalid reps value" });
-  }
+    db.run(
+      "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
+      [exercise],
+      (err) => {
+        if (err) {
+          db.run("ROLLBACK");
+          return res.status(500).json({ error: "Failed to create exercise" });
+        }
 
-  if ("sets" in req.body && (typeof req.body.sets !== "number" || req.body.sets <= 0)) {
-    return res.status(400).json({ error: "Invalid sets value" });
-  }
+        db.get(
+          "SELECT exercise_id FROM exercise WHERE name = ?",
+          [exercise],
+          (err, row) => {
+            if (err || !row) {
+              db.run("ROLLBACK");
+              return res.status(500).json({ error: "Failed to retrieve exercise" });
+            }
 
-  for (const session of sessions) {
-    const exercise = session.exercises.find(ex => ex.id === id);
-    if (exercise) {
-      Object.assign(exercise, req.body);
-      return res.json(exercise);
-    }
-  }
+            const exerciseId = row.exercise_id;
 
-  return res.status(404).json({ error: "Log not found" });
+            db.run(
+              `
+              UPDATE exercise_log 
+              SET exercise_id = ?, weight_lbs = ?, reps = ?, sets = ? 
+              WHERE log_id = ?
+              `,
+              [exerciseId, weight, reps, sets, id],
+              function (err) {
+                if (err) {
+                  db.run("ROLLBACK");
+                  return res.status(500).json({ error: "Failed to update exercise log" });
+                }
+
+                if (this.changes === 0) {
+                  db.run("ROLLBACK");
+                  return res.status(404).json({ error: "Log not found" });
+                }
+
+                db.run("COMMIT");
+
+                res.json({
+                  id,
+                  exercise,
+                  weight_lbs: weight,
+                  reps,
+                  sets
+                });
+              }
+            );
+          }
+        );
+      }
+    );
+  });
 });
 
 // Start the server
-
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
