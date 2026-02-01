@@ -201,6 +201,10 @@ export default function WorkoutLog() {
         throw new Error("Failed to delete log");
       }
 
+      if (editingLog && editingLog.id === id) {
+        cancelEdit();
+      }
+
       await fetchLogs();
     } catch (err) {
       console.error("Error deleting log:", err);
