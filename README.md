@@ -46,10 +46,6 @@ The schema and ERD are documented in `/docs/data-model.md`.
 
 Pre-implementation planning and design decisions are documented in `/docs/project-plan.md`.
 
-## Notes
-
-This project is intended as a portfolio piece demonstrating core full-stack fundamentals, including state management, input validation, transactional database writes, and REST API design.
-
 ## How to Run
 
 ### Prerequisites
