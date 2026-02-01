@@ -10,16 +10,29 @@ A single-user full-stack workout logging application focused on correctness, inp
 - Enforces basic domain constraints (valid ranges, required fields)
 - Validates input before persistence
 - Stores and retrieves workout data via a REST API
-- Backend persistence is currently being migrated from in-memory storage to SQLite with a normalized relational schema
+- Persists workout data using SQLite with normalized relational schema
 
 
 ## Tech Stack
 
 - Frontend: React
 
-- Backend: Node.js, Express (SQLite migration in progress)
+- Backend: Node.js, Express, SQLite
 
 - API: REST (JSON)
+
+
+## Architecture & Data Model
+
+The backend uses a normalized relational schema backed by SQLite.
+Workout data is organized across three core entities:
+
+- **Workout** — represents a workout session, uniquely identified by date
+- **Exercise** — reusable exercise definitions
+- **ExerciseLog** — junction table storing sets, reps, and weight per exercise per workout
+
+Foreign key constraints and cascading deletes are enforced at the database level.
+The schema and ERD are documented in `/docs/data-model.md`.
 
 
 
@@ -35,7 +48,7 @@ Pre-implementation planning and design decisions are documented in `/docs/projec
 
 ## Notes
 
-This project is intended as a portfolio piece demonstrating core full-stack fundamentals, including state management, validation, and backend API design.
+This project is intended as a portfolio piece demonstrating core full-stack fundamentals, including state management, input validation, transactional database writes, and REST API design.
 
 ## How to Run
 
