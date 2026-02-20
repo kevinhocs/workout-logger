@@ -33,7 +33,8 @@ app.get("/logs", (req, res) => {
 
   db.all(sql, [], (err, rows) => {
     if (err) {
-      return res.status(500).json({ error: "Failed to retrieve logs" });
+      console.error("SQLite error:", err);
+      return res.status(500).json({ error: err.message });
     }
 
     const sessions = {};
