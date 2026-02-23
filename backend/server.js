@@ -1,12 +1,22 @@
 const express = require("express");
 const cors = require("cors");
 const db = require('./db');
+const helmet = require("helmet");
 
 const app = express();
 // Enable CORS for local development / frontend access
-app.use(cors());
+if (process.env.NODE_ENV === "development") {
+  app.use(cors());
+}
+
+app.use(helmet());
+
 // Parse incoming JSON payloads into `req.body`
 app.use(express.json());
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
 
 // SQLite-backed persistent using a normalized schema
 
@@ -34,7 +44,7 @@ app.get("/logs", (req, res) => {
   db.all(sql, [], (err, rows) => {
     if (err) {
       console.error("SQLite error:", err);
-      return res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: "Database error" });
     }
 
     const sessions = {};
@@ -179,7 +189,7 @@ app.delete("/logs/:id", (req, res) => {
         return res.status(404).json({ error: "Log not found" });
       }
 
-      res.json({ message: "Log deleted successfully" });
+      res.status(204).send();
     }
   );
 });
@@ -265,6 +275,11 @@ app.put("/logs/:id", (req, res) => {
 
 // Start the server
 const PORT = process.env.PORT || 3000;
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port:${PORT}`);
