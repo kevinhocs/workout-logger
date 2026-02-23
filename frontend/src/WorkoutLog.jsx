@@ -24,7 +24,7 @@ export default function WorkoutLog() {
 
   // --- Networking / effects ---
   const fetchLogs = async () => {
-    const res = await fetch("http://localhost:3000/logs");
+    const res = await fetch("/api/logs");
     const data = await res.json();
     setLogs(data);
   };
@@ -162,14 +162,14 @@ export default function WorkoutLog() {
 
       if (editingLog) {
         // UPDATE
-        res = await fetch(`http://localhost:3000/logs/${editingLog.id}`, {
+        res = await fetch(`/api/logs/${editingLog.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updatePayload),
         });
       } else {
         // CREATE
-        res = await fetch("http://localhost:3000/logs", {
+        res = await fetch("/api/logs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(createPayload),
@@ -193,7 +193,7 @@ export default function WorkoutLog() {
   // --- Delete handler ---
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`http://localhost:3000/logs/${id}`, {
+      const res = await fetch(`/api/logs/${id}`, {
         method: "DELETE",
       });
 
