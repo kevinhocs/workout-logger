@@ -30,6 +30,7 @@ app.get("/logs", (req, res) => {
     SELECT
     w.workout_id,
     w.workout_date,
+    w.bodyweight_lbs,
     l.log_id,
     e.name AS exercise,
     l.weight_lbs,
@@ -56,6 +57,7 @@ app.get("/logs", (req, res) => {
         sessions[workoutId] = {
           id: workoutId,
           date: row.workout_date,
+          bodyweight_lbs: row.bodyweight_lbs,
           exercises: []
         };
       }
@@ -75,7 +77,7 @@ app.get("/logs", (req, res) => {
 
 // Create a new exercise log entry (creates workouts/exercises as needed)
 app.post("/logs", (req, res) => {
-  const {date, exercise, weight, reps, sets} = req.body;
+  const {date, exercise, weight, reps, sets, bodyweight} = req.body;
 
   if (!date || !exercise || weight == null || reps == null || sets == null) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -119,6 +121,13 @@ app.post("/logs", (req, res) => {
             if (err || !row) {
               db.run("ROLLBACK");
               return res.status(500).json({ error: "Failed to retrieve workout" });
+            }
+
+            if (bodyweight != null) {
+              db.run(
+                "UPDATE workout SET bodyweight_lbs = ? WHERE workout_id = ?",
+                [bodyweight, row.workout_id],
+              );
             }
 
             const workoutId = row.workout_id;
