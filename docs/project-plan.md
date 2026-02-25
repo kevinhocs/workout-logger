@@ -165,3 +165,45 @@ Behavior:
 - Additional exercise metadata
 - Improved filtering or analytics
 - Authentication and multi-user support
+
+## Project Evolution
+
+### Phase 1 - CRUD MVP
+
+- Full-stack React + Express app
+- SQLite persistence
+- Single-user design
+- Local development
+
+### Phase 2 – Production Deployment
+
+- Deployed to AWS EC2
+- Nginx reverse proxy
+- HTTPS with Let's Encrypt
+- Live production database
+- Remote access via domain
+
+### Phase 3 - Analytics & Modeling Layer (In Progress)
+#### Completed
+- Separate Python analytics engine
+- Read-only connection to production SQLite DB
+- Schema validation & invariant checks
+- Per-exercise descriptive statistics
+
+#### Planned
+- Baseline next-session forecasting
+- Long-term trend modeling
+- Chronological rolling evaluation
+- Error measurement (MAE)
+- Model comparison against baseline
+
+#### Modeling Scope
+- Within-user longitudinal modeling only
+- Predict next-session top set weight per exercise
+- Estimate long-term strength trend over time
+- Predictions are statistical estimates, not prescriptive advice
+
+#### Assumptions
+- Stable training structure
+- No major injury regime changes
+- Similar recovery conditions across sessions
