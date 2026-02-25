@@ -15,6 +15,7 @@ export default function WorkoutLog() {
     reps: "",
     sets: "",
     notes: "",
+    bodyweight: "",
   });
 
   // --- Other UI state ---
@@ -83,6 +84,13 @@ export default function WorkoutLog() {
     if (form.sets !== "" && !/^\d+$/.test(form.sets)) {
       errors.sets = "Sets must be a positive whole number.";
     }
+    if (form.bodyweight !== "") {
+      if (!/^\d+(\.\d+)?$/.test(form.bodyweight)) {
+        errors.bodyweight = "Bodyweight must be a positive number (decimals allowed)";
+      } else if (Number(form.bodyweight) <= 0) {
+        errors.bodyweight = "Bodyweight must be greater than 0.";
+      }
+    }
 
     return errors;
   }
@@ -116,22 +124,26 @@ export default function WorkoutLog() {
 
   // Toggle displayed unit and convert the current input weight if present
   const toggleWeightUnit = () => {
-    const currentWeight = Number(form.weight);
-    if (!Number.isFinite(currentWeight)) {
-      // No numeric weight entered, just flip the unit label
-      setUnit((u) => (u === "lbs" ? "kg" : "lbs"));
-      return;
-    }
+    const nextUnit = unit === "lbs" ? "kg" : "lbs";
 
-    if (unit === "lbs") {
-      const kg = round1(currentWeight / KG_TO_LB);
-      setForm((prev) => ({ ...prev, weight: String(kg) }));
-      setUnit("kg");
-    } else {
-      const lbs = round1(currentWeight * KG_TO_LB);
-      setForm((prev) => ({ ...prev, weight: String(lbs) }));
-      setUnit("lbs");
-    }
+    setForm((prev) => {
+      const convert = (value) => {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return value;
+
+        return nextUnit === "kg"
+          ? String(round1(num / KG_TO_LB))
+          : String(round1(num * KG_TO_LB));
+      };
+
+      return {
+        ...prev,
+        weight: convert(prev.weight),
+        bodyweight: convert(prev.bodyweight),
+      };
+    });
+
+    setUnit(nextUnit);
   };
 
   // --- Submit handler (create or update) ---
@@ -154,6 +166,7 @@ export default function WorkoutLog() {
 
     const createPayload = {
       date: form.date,
+      bodyweight: Number(form.bodyweight),
       ...updatePayload,
     };
 
@@ -182,7 +195,7 @@ export default function WorkoutLog() {
 
       await fetchLogs();
       setEditingLog(null);
-      setForm({ date: "", exercise: "", weight: "", reps: "", sets: "", notes: "" });
+      setForm({ date: "", exercise: "", weight: "", reps: "", sets: "", notes: "", bodyweight: "" });
       setUnit("lbs");
     } catch (err) {
       console.error("Error submitting log:", err);
@@ -213,16 +226,17 @@ export default function WorkoutLog() {
   };
 
   // --- Edit handlers ---
-  const startEdit = (log, date) => {
+  const startEdit = (log, session) => {
     const displayWeight = unit === "kg" ? round1(toKg(log.weight)) : log.weight;
     setEditingLog(log);
     setErrors({});
     setForm({
-      date,
+      date: session.date,
       exercise: log.exercise,
       weight: String(displayWeight),
       reps: log.reps,
       sets: log.sets,
+      bodyweight: session.bodyweight_lbs || "",
       notes: log.notes || "",
     });
   };
@@ -230,7 +244,7 @@ export default function WorkoutLog() {
   const cancelEdit = () => {
     setEditingLog(null);
     setErrors({});
-    setForm({ date: "", exercise: "", weight: "", reps: "", sets: "", notes: "" });
+    setForm({ date: "", exercise: "", weight: "", reps: "", sets: "", bodyweight: "", notes: "" });
   };
 
   // --- Render UI ---
@@ -241,7 +255,8 @@ export default function WorkoutLog() {
         <p className="subtle">
           Logs represent top working sets per exercise.
         </p>
-        <button type="button"
+        <button
+          type="button"
           className="unit-toggle"
           onClick={toggleWeightUnit}
         >
@@ -279,6 +294,12 @@ export default function WorkoutLog() {
             <label>Total Working Sets</label>
             <input name="sets" value={form.sets} onChange={handleChange} />
             {errors.sets && <span className="error" role="alert">{errors.sets}</span>}
+          </div>
+
+          <div className="field">
+            <label>Bodyweight ({unit})</label>
+            <input type="number" name="bodyweight" value={form.bodyweight} onChange={handleChange} min="0" step="any" />
+            {errors.bodyweight && <span className="error" role="alert">{errors.bodyweight}</span>}
           </div>
 
           <div className="field">
@@ -320,7 +341,7 @@ export default function WorkoutLog() {
                 </div>
 
                 <div className="log-actions">
-                  <button onClick={() => startEdit(log, session.date)}>Edit</button>
+                  <button onClick={() => startEdit(log, session)}>Edit</button>
                   <button onClick={() => handleDelete(log.id)}>Delete</button>
                 </div>
               </div>
