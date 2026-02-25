@@ -123,10 +123,16 @@ app.post("/logs", (req, res) => {
               return res.status(500).json({ error: "Failed to retrieve workout" });
             }
 
-            if (bodyweight != null) {
+            if (typeof bodyweight === "number" && bodyweight > 0) {
               db.run(
                 "UPDATE workout SET bodyweight_lbs = ? WHERE workout_id = ?",
                 [bodyweight, row.workout_id],
+                (err) => {
+                  if (err) {
+                    db.run("ROLLBACK");
+                    return res.status(500).json({ error: "Failed to update bodyweight" });
+                  }
+                }
               );
             }
 
@@ -154,32 +160,32 @@ app.post("/logs", (req, res) => {
                       "INSERT INTO exercise_log (workout_id, exercise_id, weight_lbs, reps, sets) VALUES (?, ?, ?, ?, ?)",
                       [workoutId, exerciseId, weight, reps, sets],
                       function (err) {
-                      if (err) {
-                        db.run("ROLLBACK");
-                        return res.status(500).json({ error: "Failed to create exercise log" });
+                        if (err) {
+                          db.run("ROLLBACK");
+                          return res.status(500).json({ error: "Failed to create exercise log" });
+                        }
+
+                        db.run("COMMIT");
+
+                        res.status(201).json({
+                          id: this.lastID.toString(),
+                          date,
+                          exercise,
+                          weight_lbs: weight,
+                          reps,
+                          sets
+                        });
                       }
-
-                      db.run("COMMIT");
-
-                      res.status(201).json({
-                        id: this.lastID.toString(),
-                        date,
-                        exercise,
-                        weight_lbs: weight,
-                        reps,
-                        sets
-                      });
-                    }
-                  );
-                }
-              );
-            }
-          );
-        }
-      );
-    }
-  );
-});
+                    );
+                  }
+                );
+              }
+            );
+          }
+        );
+      }
+    );
+  });
 });
 
 // Delete a log by id
