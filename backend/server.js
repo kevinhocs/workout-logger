@@ -115,8 +115,9 @@ app.post("/logs", (req, res) => {
     db.run("BEGIN TRANSACTION;");
 
     db.run(
-      "INSERT OR IGNORE INTO workout (workout_date) VALUES (?)",
-      [date],
+      `INSERT INTO workout (workout_date, bodyweight_lbs) VALUES (?, ?)
+      ON CONFLICT(workout_date) DO UPDATE SET bodyweight_lbs = excluded.bodyweight_lbs`,
+      [date, bodyweight],
       (err) => {
         if (err) {
           db.run("ROLLBACK");
