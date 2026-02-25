@@ -55,6 +55,7 @@ export default function WorkoutLog() {
     // Required fields
     if (form.exercise.trim() === "") errors.exercise = "Exercise selection is required!";
     if (form.weight === "") errors.weight = "Weight value is required!";
+    if (form.bodyweight === "") errors.bodyweight = "Bodyweight value is required!";
 
     // Reps validation
     if (form.reps === "") {
@@ -162,6 +163,7 @@ export default function WorkoutLog() {
       reps: Number(form.reps),
       sets: Number(form.sets),
       weight: weightInLbs,
+      bodyweight: Number(form.bodyweight),
     };
 
     const createPayload = {
@@ -196,7 +198,6 @@ export default function WorkoutLog() {
       await fetchLogs();
       setEditingLog(null);
       setForm({ date: "", exercise: "", weight: "", reps: "", sets: "", notes: "", bodyweight: "" });
-      setUnit("lbs");
     } catch (err) {
       console.error("Error submitting log:", err);
       alert("Failed to save workout. Server may be unavailable.");
@@ -236,7 +237,11 @@ export default function WorkoutLog() {
       weight: String(displayWeight),
       reps: log.reps,
       sets: log.sets,
-      bodyweight: session.bodyweight_lbs || "",
+      bodyweight: session.bodyweight_lbs != null
+        ? (unit === "kg"
+            ? String(round1(toKg(session.bodyweight_lbs)))
+            : String(session.bodyweight_lbs))
+        : "",
       notes: log.notes || "",
     });
   };
@@ -268,7 +273,8 @@ export default function WorkoutLog() {
         <div className="form-stack">
           <div className="field">
             <label>Date</label>
-            <input type="date" name="date" value={form.date} max={new Date().toISOString().split("T")[0]} onChange={handleChange} />
+            <input type="date" name="date" value={form.date} max={new Date().toISOString().split("T")[0]} onChange={handleChange} 
+            disabled={!!editingLog} />
             {errors.date && <span className="error" role="alert">{errors.date}</span>}
           </div>
 
@@ -326,6 +332,14 @@ export default function WorkoutLog() {
         {logs.map((session) => (
           <div key={session.id} className="session">
             <h3>{session.date}</h3>
+
+            {session.bodyweight_lbs != null && (
+              <div className="session-bodyweight">
+                Bodyweight: {unit === "kg"
+                  ? `${round1(toKg(session.bodyweight_lbs))} kg`
+                  : `${session.bodyweight_lbs} lbs`}
+              </div>
+            )}
 
             {session.exercises.map((log) => (
               <div key={log.id} className="log-row">
