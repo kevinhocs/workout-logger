@@ -9,7 +9,7 @@ Source: https://github.com/kevinhocs/workout-logger
 
 ## Overview
 
-- Logs workouts composed of exercises, sets, reps, and weight
+- Logs workouts by tracking the top working set per exercise along with total working sets performed.
 - Enforces domain constraints through frontend validation and backend verification
 - Stores and retrieves workout data via a REST API
 - Persists workout data using SQLite with normalized relational schema
@@ -66,12 +66,13 @@ The schema and ERD are documented in `/docs/data-model.md`.
 
 
 ## Structure
-
+```
 frontend/ React client
 
 backend/ Express REST API
 
 docs/ Design documentation and ERD
+```
 
 ## Design
 
