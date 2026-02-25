@@ -18,7 +18,8 @@ db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS workout (
             workout_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            workout_date TEXT NOT NULL UNIQUE
+            workout_date TEXT NOT NULL UNIQUE,
+            bodyweight_lbs REAL
         )
     `);
 
@@ -42,5 +43,6 @@ db.serialize(() => {
         )
     `);
 });
+
 
 module.exports = db;
