@@ -238,6 +238,9 @@ export default function WorkoutLog() {
     <div className="panel">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1>Workout Logger</h1>
+        <p className="subtle">
+          Logs represent top working sets per exercise.
+        </p>
         <button type="button"
           className="unit-toggle"
           onClick={toggleWeightUnit}
@@ -261,19 +264,19 @@ export default function WorkoutLog() {
           </div>
 
           <div className="field">
-            <label>Weight ({unit})</label>
+            <label>Top Set Weight ({unit})</label>
             <input type="number" name="weight" value={form.weight} onChange={handleChange} min="0" step="any" />
             {errors.weight && <span className="error" role="alert">{errors.weight}</span>}
           </div>
 
           <div className="field">
-            <label>Reps</label>
+            <label>Top Set Reps</label>
             <input name="reps" value={form.reps} onChange={handleChange} />
             {errors.reps && <span className="error" role="alert">{errors.reps}</span>}
           </div>
 
           <div className="field">
-            <label>Sets</label>
+            <label>Total Working Sets</label>
             <input name="sets" value={form.sets} onChange={handleChange} />
             {errors.sets && <span className="error" role="alert">{errors.sets}</span>}
           </div>
