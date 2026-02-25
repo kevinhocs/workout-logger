@@ -19,7 +19,7 @@ db.serialize(() => {
         CREATE TABLE IF NOT EXISTS workout (
             workout_id INTEGER PRIMARY KEY AUTOINCREMENT,
             workout_date TEXT NOT NULL UNIQUE,
-            bodyweight_lbs REAL
+            bodyweight_lbs REAL NOT NULL    
         )
     `);
 

@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const db = require('./db');
+const db = require("./db");
 const helmet = require("helmet");
 
 const app = express();
@@ -58,7 +58,7 @@ app.get("/logs", (req, res) => {
           id: workoutId,
           date: row.workout_date,
           bodyweight_lbs: row.bodyweight_lbs,
-          exercises: []
+          exercises: [],
         };
       }
 
@@ -67,19 +67,26 @@ app.get("/logs", (req, res) => {
         exercise: row.exercise,
         weight: row.weight_lbs,
         reps: row.reps,
-        sets: row.sets
+        sets: row.sets,
       });
     }
-  
+
     res.json(Object.values(sessions));
   });
 });
 
 // Create a new exercise log entry (creates workouts/exercises as needed)
 app.post("/logs", (req, res) => {
-  const {date, exercise, weight, reps, sets, bodyweight} = req.body;
+  const { date, exercise, weight, reps, sets, bodyweight } = req.body;
 
-  if (!date || !exercise || weight == null || reps == null || sets == null) {
+  if (
+    !date ||
+    !exercise ||
+    weight == null ||
+    reps == null ||
+    sets == null ||
+    bodyweight == null
+  ) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -95,9 +102,11 @@ app.post("/logs", (req, res) => {
     typeof weight !== "number" ||
     typeof reps !== "number" ||
     typeof sets !== "number" ||
+    typeof bodyweight !== "number" ||
     weight < 0 ||
     reps <= 0 ||
-    sets <= 0
+    sets <= 0 ||
+    bodyweight <= 0
   ) {
     return res.status(400).json({ error: "Invalid numeric values" });
   }
@@ -120,7 +129,9 @@ app.post("/logs", (req, res) => {
           (err, row) => {
             if (err || !row) {
               db.run("ROLLBACK");
-              return res.status(500).json({ error: "Failed to retrieve workout" });
+              return res
+                .status(500)
+                .json({ error: "Failed to retrieve workout" });
             }
 
             if (typeof bodyweight === "number" && bodyweight > 0) {
@@ -130,9 +141,11 @@ app.post("/logs", (req, res) => {
                 (err) => {
                   if (err) {
                     db.run("ROLLBACK");
-                    return res.status(500).json({ error: "Failed to update bodyweight" });
+                    return res
+                      .status(500)
+                      .json({ error: "Failed to update bodyweight" });
                   }
-                }
+                },
               );
             }
 
@@ -143,7 +156,9 @@ app.post("/logs", (req, res) => {
               (err) => {
                 if (err) {
                   db.run("ROLLBACK");
-                  return res.status(500).json({ error: "Failed to create exercise" });
+                  return res
+                    .status(500)
+                    .json({ error: "Failed to create exercise" });
                 }
 
                 db.get(
@@ -152,7 +167,9 @@ app.post("/logs", (req, res) => {
                   (err, row) => {
                     if (err || !row) {
                       db.run("ROLLBACK");
-                      return res.status(500).json({ error: "Failed to retrieve exercise" });
+                      return res
+                        .status(500)
+                        .json({ error: "Failed to retrieve exercise" });
                     }
 
                     const exerciseId = row.exercise_id;
@@ -162,7 +179,9 @@ app.post("/logs", (req, res) => {
                       function (err) {
                         if (err) {
                           db.run("ROLLBACK");
-                          return res.status(500).json({ error: "Failed to create exercise log" });
+                          return res
+                            .status(500)
+                            .json({ error: "Failed to create exercise log" });
                         }
 
                         db.run("COMMIT");
@@ -173,17 +192,17 @@ app.post("/logs", (req, res) => {
                           exercise,
                           weight_lbs: weight,
                           reps,
-                          sets
+                          sets,
                         });
-                      }
+                      },
                     );
-                  }
+                  },
                 );
-              }
+              },
             );
-          }
+          },
         );
-      }
+      },
     );
   });
 });
@@ -192,29 +211,31 @@ app.post("/logs", (req, res) => {
 app.delete("/logs/:id", (req, res) => {
   const { id } = req.params;
 
-  db.run(
-    "DELETE FROM exercise_log WHERE log_id = ?",
-    [id],
-    function (err) {
-      if (err) {
-        return res.status(500).json({ error: "Failed to delete log" });
-      }
-
-      if (this.changes === 0) {
-        return res.status(404).json({ error: "Log not found" });
-      }
-
-      res.status(204).send();
+  db.run("DELETE FROM exercise_log WHERE log_id = ?", [id], function (err) {
+    if (err) {
+      return res.status(500).json({ error: "Failed to delete log" });
     }
-  );
+
+    if (this.changes === 0) {
+      return res.status(404).json({ error: "Log not found" });
+    }
+
+    res.status(204).send();
+  });
 });
 
 // Update a log by id
 app.put("/logs/:id", (req, res) => {
   const { id } = req.params;
-  const {exercise, weight, reps, sets} = req.body;
+  const { exercise, weight, reps, sets, bodyweight } = req.body;
 
-  if (!exercise || weight == null || reps == null || sets == null) {
+  if (
+    !exercise ||
+    weight == null ||
+    reps == null ||
+    sets == null ||
+    bodyweight == null
+  ) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -222,9 +243,11 @@ app.put("/logs/:id", (req, res) => {
     typeof weight !== "number" ||
     typeof reps !== "number" ||
     typeof sets !== "number" ||
+    typeof bodyweight !== "number" ||
     weight < 0 ||
     reps <= 0 ||
-    sets <= 0
+    sets <= 0 ||
+    bodyweight <= 0
   ) {
     return res.status(400).json({ error: "Invalid numeric values" });
   }
@@ -247,43 +270,78 @@ app.put("/logs/:id", (req, res) => {
           (err, row) => {
             if (err || !row) {
               db.run("ROLLBACK");
-              return res.status(500).json({ error: "Failed to retrieve exercise" });
+              return res
+                .status(500)
+                .json({ error: "Failed to retrieve exercise" });
             }
 
             const exerciseId = row.exercise_id;
 
-            db.run(
-              `
-              UPDATE exercise_log 
-              SET exercise_id = ?, weight_lbs = ?, reps = ?, sets = ? 
-              WHERE log_id = ?
-              `,
-              [exerciseId, weight, reps, sets, id],
-              function (err) {
-                if (err) {
+            db.get(
+              "SELECT workout_id FROM exercise_log WHERE log_id = ?",
+              [id],
+              (err, workoutRow) => {
+                if (err || !workoutRow) {
                   db.run("ROLLBACK");
-                  return res.status(500).json({ error: "Failed to update exercise log" });
+                  return res
+                    .status(500)
+                    .json({ error: "Failed to retrieve workout" });
                 }
 
-                if (this.changes === 0) {
-                  db.run("ROLLBACK");
-                  return res.status(404).json({ error: "Log not found" });
-                }
+                const workoutId = workoutRow.workout_id;
 
-                db.run("COMMIT");
+                db.run(
+                  "UPDATE workout SET bodyweight_lbs = ? WHERE workout_id = ?",
+                  [bodyweight, workoutId],
+                  (err) => {
+                    if (err) {
+                      db.run("ROLLBACK");
+                      return res
+                        .status(500)
+                        .json({ error: "Failed to update bodyweight" });
+                    }
 
-                res.json({
-                  id,
-                  exercise,
-                  weight_lbs: weight,
-                  reps,
-                  sets
-                });
-              }
+                    db.run(
+                      `
+                      UPDATE exercise_log 
+                      SET exercise_id = ?, weight_lbs = ?, reps = ?, sets = ? 
+                      WHERE log_id = ?
+                      `,
+                      [exerciseId, weight, reps, sets, id],
+                      function (err) {
+                        if (err) {
+                          db.run("ROLLBACK");
+                          return res
+                            .status(500)
+                            .json({ error: "Failed to update exercise log" });
+                        }
+
+                        if (this.changes === 0) {
+                          db.run("ROLLBACK");
+                          return res
+                            .status(404)
+                            .json({ error: "Log not found" });
+                        }
+
+                        db.run("COMMIT");
+
+                        res.json({
+                          id,
+                          exercise,
+                          weight_lbs: weight,
+                          reps,
+                          sets,
+                          bodyweight_lbs: bodyweight,
+                        });
+                      },
+                    );
+                  },
+                );
+              },
             );
-          }
+          },
         );
-      }
+      },
     );
   });
 });
@@ -293,7 +351,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: 'Internal Server Error' });
+  res.status(500).json({ error: "Internal Server Error" });
 });
 
 app.listen(PORT, "0.0.0.0", () => {
