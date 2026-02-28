@@ -25,7 +25,7 @@ app.get("/", (req, res) => {
 });
 
 // Return all workout logs
-app.get("/logs", (req, res) => {
+app.get("/api/logs", (req, res) => {
   const sql = `
     SELECT
     w.workout_id,
@@ -76,7 +76,7 @@ app.get("/logs", (req, res) => {
 });
 
 // Create a new exercise log entry (creates workouts/exercises as needed)
-app.post("/logs", (req, res) => {
+app.post("/api/logs", (req, res) => {
   const { date, exercise, weight, reps, sets, bodyweight } = req.body;
 
   if (
@@ -209,7 +209,7 @@ app.post("/logs", (req, res) => {
 });
 
 // Delete a log by id
-app.delete("/logs/:id", (req, res) => {
+app.delete("/api/logs/:id", (req, res) => {
   const { id } = req.params;
 
   db.run("DELETE FROM exercise_log WHERE log_id = ?", [id], function (err) {
@@ -226,7 +226,7 @@ app.delete("/logs/:id", (req, res) => {
 });
 
 // Update a log by id
-app.put("/logs/:id", (req, res) => {
+app.put("/api/logs/:id", (req, res) => {
   const { id } = req.params;
   const { exercise, weight, reps, sets, bodyweight } = req.body;
 
