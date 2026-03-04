@@ -221,6 +221,19 @@ app.delete("/api/logs/:id", (req, res) => {
       return res.status(404).json({ error: "Log not found" });
     }
 
+    // Orphan clean up
+    db.run(`
+      DELETE FROM workout
+      WHERE NOT EXISTS (SELECT 1 FROM exercise_log WHERE exercise_log.workout_id = workout.workout_id)
+    `);
+
+    db.run(`
+      DELETE FROM exercise
+      WHERE NOT EXISTS (SELECT 1 FROM exercise_log WHERE exercise_log.exercise_id = exercise.exercise_id)
+    `);
+
+    db.run("COMMIT");
+
     res.status(204).send();
   });
 });
