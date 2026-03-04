@@ -258,7 +258,7 @@ export default function WorkoutLog() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1>Workout Logger</h1>
         <p className="subtle">
-          Logs represent top working sets per exercise.
+          Each exercise records the top working set and the total number of working sets performed.
         </p>
         <button
           type="button"
@@ -273,8 +273,14 @@ export default function WorkoutLog() {
         <div className="form-stack">
           <div className="field">
             <label>Date</label>
-            <input type="date" name="date" value={form.date} max={new Date().toISOString().split("T")[0]} onChange={handleChange} 
-            disabled={!!editingLog} />
+            <input
+              type="date"
+              name="date"
+              value={form.date}
+              max={new Date().toISOString().split("T")[0]}
+              onChange={handleChange}
+              disabled={!!editingLog}
+            />
             {errors.date && <span className="error" role="alert">{errors.date}</span>}
           </div>
 
@@ -326,7 +332,7 @@ export default function WorkoutLog() {
         </div>
       </form>
 
-      <h2>Logged Workouts</h2>
+      <h2>Workout Sessions</h2>
 
       <div className="log-list">
         {logs.map((session) => (
@@ -346,11 +352,15 @@ export default function WorkoutLog() {
                 <div className="log-meta">
                   <div className="log-exercise">{log.exercise}</div>
                   <div className="log-details">
-                    {unit === "kg"
-                      ? `${round1(toKg(log.weight))} kg`
-                      : `${log.weight} lbs`}{" "}
-                    | {log.reps} {pluralize(Number(log.reps), "rep")} |{" "}
-                    {log.sets} {pluralize(Number(log.sets), "set")}
+                    <div className="top-set">
+                      Top Set: {unit === "kg"
+                        ? `${round1(toKg(log.weight))} kg`
+                        : `${log.weight} lbs`} × {log.reps}
+                    </div>
+
+                    <div className="working-sets">
+                      Working Sets: {log.sets} {pluralize(Number(log.sets), "set")}
+                    </div>
                   </div>
                 </div>
 
