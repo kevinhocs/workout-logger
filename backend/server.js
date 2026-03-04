@@ -111,16 +111,12 @@ app.post("/api/logs", (req, res) => {
     return res.status(400).json({ error: "Invalid numeric values" });
   }
 
-  db.serialize(() => {
-    db.run("BEGIN TRANSACTION;");
-
     db.run(
       `INSERT INTO workout (workout_date, bodyweight_lbs) VALUES (?, ?)
       ON CONFLICT(workout_date) DO UPDATE SET bodyweight_lbs = excluded.bodyweight_lbs`,
       [date, bodyweight],
       (err) => {
         if (err) {
-          db.run("ROLLBACK");
           return res.status(500).json({ error: "Failed to create workout" });
         }
 
@@ -129,7 +125,6 @@ app.post("/api/logs", (req, res) => {
           [date],
           (err, row) => {
             if (err || !row) {
-              db.run("ROLLBACK");
               return res
                 .status(500)
                 .json({ error: "Failed to retrieve workout" });
@@ -141,7 +136,6 @@ app.post("/api/logs", (req, res) => {
                 [bodyweight, row.workout_id],
                 (err) => {
                   if (err) {
-                    db.run("ROLLBACK");
                     return res
                       .status(500)
                       .json({ error: "Failed to update bodyweight" });
@@ -156,7 +150,6 @@ app.post("/api/logs", (req, res) => {
               [exercise],
               (err) => {
                 if (err) {
-                  db.run("ROLLBACK");
                   return res
                     .status(500)
                     .json({ error: "Failed to create exercise" });
@@ -167,7 +160,6 @@ app.post("/api/logs", (req, res) => {
                   [exercise],
                   (err, row) => {
                     if (err || !row) {
-                      db.run("ROLLBACK");
                       return res
                         .status(500)
                         .json({ error: "Failed to retrieve exercise" });
@@ -179,13 +171,10 @@ app.post("/api/logs", (req, res) => {
                       [workoutId, exerciseId, weight, reps, sets],
                       function (err) {
                         if (err) {
-                          db.run("ROLLBACK");
                           return res
                             .status(500)
                             .json({ error: "Failed to create exercise log" });
                         }
-
-                        db.run("COMMIT");
 
                         res.status(201).json({
                           id: this.lastID.toString(),
@@ -206,7 +195,6 @@ app.post("/api/logs", (req, res) => {
       },
     );
   });
-});
 
 // Delete a log by id
 app.delete("/api/logs/:id", (req, res) => {
@@ -231,8 +219,6 @@ app.delete("/api/logs/:id", (req, res) => {
       DELETE FROM exercise
       WHERE NOT EXISTS (SELECT 1 FROM exercise_log WHERE exercise_log.exercise_id = exercise.exercise_id)
     `);
-
-    db.run("COMMIT");
 
     res.status(204).send();
   });
@@ -266,15 +252,11 @@ app.put("/api/logs/:id", (req, res) => {
     return res.status(400).json({ error: "Invalid numeric values" });
   }
 
-  db.serialize(() => {
-    db.run("BEGIN TRANSACTION;");
-
     db.run(
       "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
       [exercise],
       (err) => {
         if (err) {
-          db.run("ROLLBACK");
           return res.status(500).json({ error: "Failed to create exercise" });
         }
 
@@ -283,7 +265,6 @@ app.put("/api/logs/:id", (req, res) => {
           [exercise],
           (err, row) => {
             if (err || !row) {
-              db.run("ROLLBACK");
               return res
                 .status(500)
                 .json({ error: "Failed to retrieve exercise" });
@@ -296,7 +277,6 @@ app.put("/api/logs/:id", (req, res) => {
               [id],
               (err, workoutRow) => {
                 if (err || !workoutRow) {
-                  db.run("ROLLBACK");
                   return res
                     .status(500)
                     .json({ error: "Failed to retrieve workout" });
@@ -309,7 +289,6 @@ app.put("/api/logs/:id", (req, res) => {
                   [bodyweight, workoutId],
                   (err) => {
                     if (err) {
-                      db.run("ROLLBACK");
                       return res
                         .status(500)
                         .json({ error: "Failed to update bodyweight" });
@@ -324,20 +303,16 @@ app.put("/api/logs/:id", (req, res) => {
                       [exerciseId, weight, reps, sets, id],
                       function (err) {
                         if (err) {
-                          db.run("ROLLBACK");
                           return res
                             .status(500)
                             .json({ error: "Failed to update exercise log" });
                         }
 
                         if (this.changes === 0) {
-                          db.run("ROLLBACK");
                           return res
                             .status(404)
                             .json({ error: "Log not found" });
                         }
-
-                        db.run("COMMIT");
 
                         res.json({
                           id,
@@ -358,7 +333,6 @@ app.put("/api/logs/:id", (req, res) => {
       },
     );
   });
-});
 
 // Start the server
 const PORT = process.env.PORT || 3000;
