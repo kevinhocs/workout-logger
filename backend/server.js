@@ -88,7 +88,11 @@ app.get("/api/logs", (req, res) => {
       }
     }
 
-    res.json(Object.values(sessions));
+    const sortedSessions = Object.values(sessions).sort(
+      (a, b) => new Date(b.date) - new Date(a.date),
+    );
+
+    res.json(sortedSessions);
   });
 });
 
@@ -273,10 +277,27 @@ app.delete("/api/logs/:id", (req, res) => {
               }
 
               res.status(204).send();
-            }
+            },
           );
-        }
+        },
       );
+    },
+  );
+});
+
+app.delete("/api/workouts/:id", (req, res) => {
+  const { id } = req.params;
+
+  db.run(
+    "DELETE FROM workout WHERE workout_id = ?",
+    [id],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Failed to delete workout" });
+      }
+
+      res.status(204).send();
     }
   );
 });
@@ -365,18 +386,18 @@ app.put("/api/exercises/:id", (req, res) => {
                             if (inserted === sets.length) {
                               res.json({ success: true });
                             }
-                          }
+                          },
                         );
                       });
-                    }
+                    },
                   );
-                }
+                },
               );
-            }
+            },
           );
-        }
+        },
       );
-    }
+    },
   );
 });
 
