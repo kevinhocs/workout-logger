@@ -18,6 +18,8 @@ export default function WorkoutLog() {
     bodyweight: "",
   });
 
+  const [sets, setSets] = useState([{ weight: "", reps: "" }]);
+
   // --- Other UI state ---
   const [logs, setLogs] = useState([]); // fetched workout entries
   const [errors, setErrors] = useState({}); // validation messages
@@ -54,36 +56,30 @@ export default function WorkoutLog() {
 
     // Required fields
     if (form.exercise.trim() === "") errors.exercise = "Exercise selection is required!";
-    if (form.weight === "") errors.weight = "Weight value is required!";
+    if (!sets.length || sets.some(s => s.weight === "")) {
+      errors.weight = "Each set must have a weight.";
+    }
     if (form.bodyweight === "") errors.bodyweight = "Bodyweight value is required!";
 
     // Reps validation
-    if (form.reps === "") {
-      errors.reps = "Reps value is required!";
-    } else if (!/^\d+$/.test(form.reps)) {
-      errors.reps = "Reps must be a whole number.";
-    } else if (Number(form.reps) <= 0) {
-      errors.reps = "Reps must be at least 1.";
+    // Reps validation (per set)
+    if (!sets.length || sets.some((s) => s.reps === "")) {
+      errors.reps = "Each set must have reps.";
     }
 
-    // Sets validation (single, ordered chain)
-    if (form.sets === "") {
-      errors.sets = "Sets value is required!";
-    } else if (!/^\d+$/.test(form.sets)) {
-      errors.sets = "Sets must be a whole number.";
-    } else if (Number(form.sets) <= 0) {
-      errors.sets = "Sets must be at least 1.";
+    // Sets validation
+    if (!sets.length) {
+      errors.sets = "At least one set is required.";
     }
 
-    // Numeric checks
-    if (form.weight !== "" && !/^\d+(\.\d+)?$/.test(form.weight)) {
-      errors.weight = "Weight must be a positive number (decimals allowed)";
-    }
-    if (form.reps !== "" && !/^\d+$/.test(form.reps)) {
-      errors.reps = "Reps must be a positive whole number.";
-    }
-    if (form.sets !== "" && !/^\d+$/.test(form.sets)) {
-      errors.sets = "Sets must be a positive whole number.";
+    // Numeric checks for sets
+    for (const s of sets) {
+      if (!/^\d+(\.\d+)?$/.test(s.weight)) {
+        errors.weight = "Set weights must be positive numbers.";
+      }
+      if (!/^\d+$/.test(s.reps)) {
+        errors.reps = "Set reps must be whole numbers.";
+      }
     }
     if (form.bodyweight !== "") {
       if (!/^\d+(\.\d+)?$/.test(form.bodyweight)) {
@@ -103,6 +99,22 @@ export default function WorkoutLog() {
       [e.target.name]: e.target.value,
     });
   };
+
+  function addSet() {
+    setSets([...sets, { weight: "", reps: "" }]);
+  }
+
+  function removeSet(index) {
+    const updated = [...sets];
+    updated.splice(index, 1);
+    setSets(updated);
+  }
+
+  function updateSet(index, field, value) {
+    const updated = [...sets];
+    updated[index][field] = value;
+    setSets(updated);
+  }
 
   function pluralize(count, singular, plural = singular + "s") {
     return count === 1 ? singular : plural;
@@ -155,29 +167,37 @@ export default function WorkoutLog() {
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
-    const inputWeight = Number(form.weight);
-    const weightInLbs = unit === "kg" ? round1(toLbs(inputWeight)) : inputWeight;
+    const setsPayload = sets.map((s) => {
+      const weightInput = Number(s.weight);
+
+      const weightInLbs =
+        unit === "kg"
+          ? round1(toLbs(weightInput))
+          : weightInput;
+
+      return {
+        weight: weightInLbs,
+        reps: Number(s.reps),
+      };
+    });
 
     const updatePayload = {
       exercise: form.exercise,
-      reps: Number(form.reps),
-      sets: Number(form.sets),
-      weight: weightInLbs,
+      sets: setsPayload,
       bodyweight: Number(form.bodyweight),
     };
 
     const createPayload = {
       date: form.date,
-      bodyweight: Number(form.bodyweight),
       ...updatePayload,
     };
 
     try {
       let res;
 
-      if (editingLog) {
+      if (editingLog?.id) {
         // UPDATE
-        res = await fetch(`/api/logs/${editingLog.id}`, {
+        res = await fetch(`/api/exercises/${editingLog.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updatePayload),
@@ -198,6 +218,7 @@ export default function WorkoutLog() {
       await fetchLogs();
       setEditingLog(null);
       setForm({ date: "", exercise: "", weight: "", reps: "", sets: "", notes: "", bodyweight: "" });
+      setSets([{ weight: "", reps: "" }]);
     } catch (err) {
       console.error("Error submitting log:", err);
       alert("Failed to save workout. Server may be unavailable.");
@@ -227,29 +248,38 @@ export default function WorkoutLog() {
   };
 
   // --- Edit handlers ---
-  const startEdit = (log, session) => {
-    const displayWeight = unit === "kg" ? round1(toKg(log.weight)) : log.weight;
-    setEditingLog(log);
+  const startEdit = (exercise, session) => {
+    const firstSetId = Array.isArray(exercise.sets) && exercise.sets.length > 0
+      ? exercise.sets[0].id
+      : null;
+
+    setEditingLog({ id: firstSetId, name: exercise.name });
     setErrors({});
+
     setForm({
       date: session.date,
-      exercise: log.exercise,
-      weight: String(displayWeight),
-      reps: log.reps,
-      sets: log.sets,
-      bodyweight: session.bodyweight_lbs != null
-        ? (unit === "kg"
-            ? String(round1(toKg(session.bodyweight_lbs)))
-            : String(session.bodyweight_lbs))
-        : "",
-      notes: log.notes || "",
+      exercise: exercise.name,
+      bodyweight: session.bodyweight_lbs ?? "",
+      notes: "",
     });
+
+    setSets(
+      exercise.sets.map((s) => ({
+        weight: String(
+          unit === "kg"
+            ? round1(toKg(s.weight))
+            : s.weight,
+        ),
+        reps: String(s.reps),
+      })),
+    );
   };
 
   const cancelEdit = () => {
     setEditingLog(null);
     setErrors({});
     setForm({ date: "", exercise: "", weight: "", reps: "", sets: "", bodyweight: "", notes: "" });
+    setSets([{ weight: "", reps: "" }]);
   };
 
   // --- Render UI ---
@@ -258,7 +288,7 @@ export default function WorkoutLog() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1>Workout Logger</h1>
         <p className="subtle">
-          Each exercise records the top working set and the total number of working sets performed.
+          Record each working set performed.
         </p>
         <button
           type="button"
@@ -291,21 +321,35 @@ export default function WorkoutLog() {
           </div>
 
           <div className="field">
-            <label>Top Set Weight ({unit})</label>
-            <input type="number" name="weight" value={form.weight} onChange={handleChange} min="0" step="any" />
-            {errors.weight && <span className="error" role="alert">{errors.weight}</span>}
-          </div>
+            <label>Sets</label>
 
-          <div className="field">
-            <label>Top Set Reps</label>
-            <input name="reps" value={form.reps} onChange={handleChange} />
-            {errors.reps && <span className="error" role="alert">{errors.reps}</span>}
-          </div>
+            {sets.map((set, index) => (
+              <div key={index} className="set-row">
+                <span>Set {index + 1}</span>
 
-          <div className="field">
-            <label>Total Working Sets</label>
-            <input name="sets" value={form.sets} onChange={handleChange} />
-            {errors.sets && <span className="error" role="alert">{errors.sets}</span>}
+                <input
+                  type="number"
+                  placeholder={`Weight (${unit})`}
+                  value={set.weight}
+                  onChange={(e) => updateSet(index, "weight", e.target.value)}
+                />
+
+                <input
+                  type="number"
+                  placeholder="Reps"
+                  value={set.reps}
+                  onChange={(e) => updateSet(index, "reps", e.target.value)}
+                />
+
+                <button type="button" onClick={() => removeSet(index)}>
+                  ✕
+                </button>
+              </div>
+            ))}
+
+            <button type="button" className="secondary" onClick={addSet}>
+              + Add Set
+            </button>
           </div>
 
           <div className="field">
@@ -347,26 +391,39 @@ export default function WorkoutLog() {
               </div>
             )}
 
-            {session.exercises.map((log) => (
-              <div key={log.id} className="log-row">
+            {(session.exercises || []).map((exercise) => (
+              <div key={`${session.id}-${exercise.name}`} className="log-row">
                 <div className="log-meta">
-                  <div className="log-exercise">{log.exercise}</div>
-                  <div className="log-details">
-                    <div className="top-set">
-                      Top Set: {unit === "kg"
-                        ? `${round1(toKg(log.weight))} kg`
-                        : `${log.weight} lbs`} × {log.reps}
-                    </div>
+                  <div className="log-exercise-row">
+                    <div className="log-exercise">{exercise.name}</div>
 
-                    <div className="working-sets">
-                      Working Sets: {log.sets} {pluralize(Number(log.sets), "set")}
+                    <div className="exercise-actions">
+                      <button
+                        className="edit-btn"
+                        onClick={() => startEdit(exercise, session)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className="delete-btn"
+                        onClick={() => handleDelete(exercise.sets[0].id)}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
-                </div>
 
-                <div className="log-actions">
-                  <button onClick={() => startEdit(log, session)}>Edit</button>
-                  <button onClick={() => handleDelete(log.id)}>Delete</button>
+                  <div className="log-details">
+                    {exercise.sets.map((set) => (
+                      <div key={set.id} className="set-line">
+                        Set {set.set_number}:{" "}
+                        {unit === "kg"
+                          ? `${round1(toKg(set.weight))} kg`
+                          : `${set.weight} lbs`} × {set.reps}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}
