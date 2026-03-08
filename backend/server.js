@@ -28,18 +28,18 @@ app.get("/", (req, res) => {
 app.get("/api/logs", (req, res) => {
   const sql = `
     SELECT
-    w.workout_id,
-    w.workout_date,
-    w.bodyweight_lbs,
-    l.log_id,
-    e.name AS exercise,
-    l.weight_lbs,
-    l.reps,
-    l.sets
+      w.workout_id,
+      w.workout_date,
+      w.bodyweight_lbs,
+      s.set_id,
+      s.set_number,
+      e.name AS exercise,
+      s.weight_lbs,
+      s.reps
     FROM workout w
-    JOIN exercise_log l ON w.workout_id = l.workout_id
-    JOIN exercise e ON l.exercise_id = e.exercise_id
-    ORDER BY w.workout_date DESC, l.log_id ASC
+    JOIN sets s ON w.workout_id = s.workout_id
+    JOIN exercise e ON s.exercise_id = e.exercise_id
+    ORDER BY w.workout_date DESC, e.name ASC, s.set_number ASC
   `;
 
   db.all(sql, [], (err, rows) => {
@@ -58,17 +58,34 @@ app.get("/api/logs", (req, res) => {
           id: workoutId,
           date: row.workout_date,
           bodyweight_lbs: row.bodyweight_lbs,
-          exercises: [],
+          exercises: {},
         };
       }
 
-      sessions[workoutId].exercises.push({
-        id: row.log_id,
-        exercise: row.exercise,
+      if (!sessions[workoutId].exercises[row.exercise]) {
+        sessions[workoutId].exercises[row.exercise] = {
+          name: row.exercise,
+          sets: [],
+        };
+      }
+
+      sessions[workoutId].exercises[row.exercise].sets.push({
+        id: row.set_id,
         weight: row.weight_lbs,
         reps: row.reps,
-        sets: row.sets,
       });
+    }
+
+    for (const session of Object.values(sessions)) {
+      session.exercises = Object.values(session.exercises);
+
+      for (const exercise of session.exercises) {
+        exercise.sets.sort((a, b) => a.id - b.id);
+
+        exercise.sets.forEach((set, index) => {
+          set.set_number = index + 1;
+        });
+      }
     }
 
     res.json(Object.values(sessions));
@@ -79,12 +96,25 @@ app.get("/api/logs", (req, res) => {
 app.post("/api/logs", (req, res) => {
   const { date, exercise, weight, reps, sets, bodyweight } = req.body;
 
+  // Accept either:
+  // 1) sets as array [{weight, reps}, ...]
+  // 2) legacy payload with weight/reps and numeric sets count
+  let normalizedSets = [];
+  if (Array.isArray(sets)) {
+    normalizedSets = sets;
+  } else if (
+    Number.isInteger(sets) &&
+    sets > 0 &&
+    typeof weight === "number" &&
+    typeof reps === "number"
+  ) {
+    normalizedSets = Array.from({ length: sets }, () => ({ weight, reps }));
+  }
+
   if (
     !date ||
     !exercise ||
-    weight == null ||
-    reps == null ||
-    sets == null ||
+    normalizedSets.length === 0 ||
     bodyweight == null
   ) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -99,240 +129,256 @@ app.post("/api/logs", (req, res) => {
   }
 
   if (
-    typeof weight !== "number" ||
-    typeof reps !== "number" ||
-    typeof sets !== "number" ||
     typeof bodyweight !== "number" ||
-    weight < 0 ||
-    reps <= 0 ||
-    sets <= 0 ||
     bodyweight <= 0
   ) {
     return res.status(400).json({ error: "Invalid numeric values" });
   }
 
-    db.run(
-      `INSERT INTO workout (workout_date, bodyweight_lbs) VALUES (?, ?)
+  for (const s of normalizedSets) {
+    if (
+      typeof s.weight !== "number" ||
+      typeof s.reps !== "number" ||
+      s.weight < 0 ||
+      s.reps <= 0
+    ) {
+      return res.status(400).json({ error: "Invalid set values" });
+    }
+  }
+
+  db.run(
+    `INSERT INTO workout (workout_date, bodyweight_lbs) VALUES (?, ?)
       ON CONFLICT(workout_date) DO UPDATE SET bodyweight_lbs = excluded.bodyweight_lbs`,
-      [date, bodyweight],
-      (err) => {
-        if (err) {
-          return res.status(500).json({ error: "Failed to create workout" });
-        }
+    [date, bodyweight],
+    (err) => {
+      if (err) {
+        return res.status(500).json({ error: "Failed to create workout" });
+      }
 
-        db.get(
-          "SELECT workout_id FROM workout WHERE workout_date = ?",
-          [date],
-          (err, row) => {
-            if (err || !row) {
-              return res
-                .status(500)
-                .json({ error: "Failed to retrieve workout" });
-            }
+      db.get(
+        "SELECT workout_id FROM workout WHERE workout_date = ?",
+        [date],
+        (err, row) => {
+          if (err || !row) {
+            return res
+              .status(500)
+              .json({ error: "Failed to retrieve workout" });
+          }
 
-            if (typeof bodyweight === "number" && bodyweight > 0) {
-              db.run(
-                "UPDATE workout SET bodyweight_lbs = ? WHERE workout_id = ?",
-                [bodyweight, row.workout_id],
-                (err) => {
-                  if (err) {
-                    return res
-                      .status(500)
-                      .json({ error: "Failed to update bodyweight" });
-                  }
-                },
-              );
-            }
-
-            const workoutId = row.workout_id;
+          if (typeof bodyweight === "number" && bodyweight > 0) {
             db.run(
-              "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
-              [exercise],
+              "UPDATE workout SET bodyweight_lbs = ? WHERE workout_id = ?",
+              [bodyweight, row.workout_id],
               (err) => {
                 if (err) {
                   return res
                     .status(500)
-                    .json({ error: "Failed to create exercise" });
+                    .json({ error: "Failed to update bodyweight" });
                 }
-
-                db.get(
-                  "SELECT exercise_id FROM exercise WHERE name = ?",
-                  [exercise],
-                  (err, row) => {
-                    if (err || !row) {
-                      return res
-                        .status(500)
-                        .json({ error: "Failed to retrieve exercise" });
-                    }
-
-                    const exerciseId = row.exercise_id;
-                    db.run(
-                      "INSERT INTO exercise_log (workout_id, exercise_id, weight_lbs, reps, sets) VALUES (?, ?, ?, ?, ?)",
-                      [workoutId, exerciseId, weight, reps, sets],
-                      function (err) {
-                        if (err) {
-                          return res
-                            .status(500)
-                            .json({ error: "Failed to create exercise log" });
-                        }
-
-                        res.status(201).json({
-                          id: this.lastID.toString(),
-                          date,
-                          exercise,
-                          weight_lbs: weight,
-                          reps,
-                          sets,
-                        });
-                      },
-                    );
-                  },
-                );
               },
             );
-          },
-        );
-      },
-    );
-  });
+          }
+
+          const workoutId = row.workout_id;
+          db.run(
+            "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
+            [exercise],
+            (err) => {
+              if (err) {
+                return res
+                  .status(500)
+                  .json({ error: "Failed to create exercise" });
+              }
+
+              db.get(
+                "SELECT exercise_id FROM exercise WHERE name = ?",
+                [exercise],
+                (err, row) => {
+                  if (err || !row) {
+                    return res
+                      .status(500)
+                      .json({ error: "Failed to retrieve exercise" });
+                  }
+
+                  const exerciseId = row.exercise_id;
+                  let inserted = 0;
+
+                  normalizedSets.forEach((set, index) => {
+                    db.run(
+                      "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps) VALUES (?, ?, ?, ?, ?)",
+                      [workoutId, exerciseId, index + 1, set.weight, set.reps],
+                      function (err) {
+                        if (err) {
+                          return res.status(500).json({ error: "Failed to create set" });
+                        }
+
+                        inserted++;
+
+                        if (inserted === normalizedSets.length) {
+                          res.status(201).json({
+                            date,
+                            exercise,
+                            sets: normalizedSets.length,
+                            bodyweight_lbs: bodyweight,
+                          });
+                        }
+                      },
+                    );
+                  });
+                },
+              );
+            },
+          );
+        },
+      );
+    },
+  );
+});
 
 // Delete a log by id
 app.delete("/api/logs/:id", (req, res) => {
   const { id } = req.params;
 
-  db.run("DELETE FROM exercise_log WHERE log_id = ?", [id], function (err) {
-    if (err) {
-      return res.status(500).json({ error: "Failed to delete log" });
+  // Find workout and exercise for this set
+  db.get(
+    "SELECT workout_id, exercise_id FROM sets WHERE set_id = ?",
+    [id],
+    (err, row) => {
+      if (err || !row) {
+        return res.status(404).json({ error: "Set not found" });
+      }
+
+      const { workout_id, exercise_id } = row;
+
+      // Delete ALL sets for that exercise in that workout
+      db.run(
+        "DELETE FROM sets WHERE workout_id = ? AND exercise_id = ?",
+        [workout_id, exercise_id],
+        function (err) {
+          if (err) {
+            return res.status(500).json({ error: "Failed to delete exercise sets" });
+          }
+
+          // Check if workout still has sets
+          db.get(
+            "SELECT COUNT(*) AS count FROM sets WHERE workout_id = ?",
+            [workout_id],
+            (err, result) => {
+              if (err) {
+                return res.status(500).json({ error: "Failed to check workout" });
+              }
+
+              if (result.count === 0) {
+                db.run("DELETE FROM workout WHERE workout_id = ?", [workout_id]);
+              }
+
+              res.status(204).send();
+            }
+          );
+        }
+      );
     }
-
-    if (this.changes === 0) {
-      return res.status(404).json({ error: "Log not found" });
-    }
-
-    // Orphan clean up
-    db.run(`
-      DELETE FROM workout
-      WHERE NOT EXISTS (SELECT 1 FROM exercise_log WHERE exercise_log.workout_id = workout.workout_id)
-    `);
-
-    db.run(`
-      DELETE FROM exercise
-      WHERE NOT EXISTS (SELECT 1 FROM exercise_log WHERE exercise_log.exercise_id = exercise.exercise_id)
-    `);
-
-    res.status(204).send();
-  });
+  );
 });
 
 // Update a log by id
-app.put("/api/logs/:id", (req, res) => {
+app.put("/api/exercises/:id", (req, res) => {
   const { id } = req.params;
-  const { exercise, weight, reps, sets, bodyweight } = req.body;
+  const { exercise, sets, bodyweight } = req.body;
 
-  if (
-    !exercise ||
-    weight == null ||
-    reps == null ||
-    sets == null ||
-    bodyweight == null
-  ) {
+  if (!exercise || !Array.isArray(sets) || sets.length === 0 || bodyweight == null) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  if (
-    typeof weight !== "number" ||
-    typeof reps !== "number" ||
-    typeof sets !== "number" ||
-    typeof bodyweight !== "number" ||
-    weight < 0 ||
-    reps <= 0 ||
-    sets <= 0 ||
-    bodyweight <= 0
-  ) {
-    return res.status(400).json({ error: "Invalid numeric values" });
+  for (const s of sets) {
+    if (
+      typeof s.weight !== "number" ||
+      typeof s.reps !== "number" ||
+      s.weight < 0 ||
+      s.reps <= 0
+    ) {
+      return res.status(400).json({ error: "Invalid set values" });
+    }
   }
 
-    db.run(
-      "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
-      [exercise],
-      (err) => {
-        if (err) {
-          return res.status(500).json({ error: "Failed to create exercise" });
-        }
+  // Find workout + exercise for this set
+  db.get(
+    "SELECT workout_id, exercise_id FROM sets WHERE set_id = ?",
+    [id],
+    (err, row) => {
+      if (err || !row) {
+        return res.status(404).json({ error: "Set not found" });
+      }
 
-        db.get(
-          "SELECT exercise_id FROM exercise WHERE name = ?",
-          [exercise],
-          (err, row) => {
-            if (err || !row) {
-              return res
-                .status(500)
-                .json({ error: "Failed to retrieve exercise" });
-            }
+      const { workout_id } = row;
 
-            const exerciseId = row.exercise_id;
+      // Update bodyweight
+      db.run(
+        "UPDATE workout SET bodyweight_lbs = ? WHERE workout_id = ?",
+        [bodyweight, workout_id],
+        (err) => {
+          if (err) {
+            return res.status(500).json({ error: "Failed to update bodyweight" });
+          }
 
-            db.get(
-              "SELECT workout_id FROM exercise_log WHERE log_id = ?",
-              [id],
-              (err, workoutRow) => {
-                if (err || !workoutRow) {
-                  return res
-                    .status(500)
-                    .json({ error: "Failed to retrieve workout" });
-                }
+          // Ensure exercise exists
+          db.run(
+            "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
+            [exercise],
+            (err) => {
+              if (err) {
+                return res.status(500).json({ error: "Failed creating exercise" });
+              }
 
-                const workoutId = workoutRow.workout_id;
+              db.get(
+                "SELECT exercise_id FROM exercise WHERE name = ?",
+                [exercise],
+                (err, exerciseRow) => {
+                  if (err || !exerciseRow) {
+                    return res.status(500).json({ error: "Exercise lookup failed" });
+                  }
 
-                db.run(
-                  "UPDATE workout SET bodyweight_lbs = ? WHERE workout_id = ?",
-                  [bodyweight, workoutId],
-                  (err) => {
-                    if (err) {
-                      return res
-                        .status(500)
-                        .json({ error: "Failed to update bodyweight" });
+                  const exerciseId = exerciseRow.exercise_id;
+
+                  // Remove old sets for this exercise/workout
+                  db.run(
+                    "DELETE FROM sets WHERE workout_id = ? AND exercise_id = ?",
+                    [workout_id, exerciseId],
+                    (err) => {
+                      if (err) {
+                        return res.status(500).json({ error: "Failed clearing sets" });
+                      }
+
+                      let inserted = 0;
+
+                      sets.forEach((set, index) => {
+                        db.run(
+                          "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps) VALUES (?, ?, ?, ?, ?)",
+                          [workout_id, exerciseId, index + 1, set.weight, set.reps],
+                          function (err) {
+                            if (err) {
+                              return res.status(500).json({ error: "Insert failed" });
+                            }
+
+                            inserted++;
+
+                            if (inserted === sets.length) {
+                              res.json({ success: true });
+                            }
+                          }
+                        );
+                      });
                     }
-
-                    db.run(
-                      `
-                      UPDATE exercise_log 
-                      SET exercise_id = ?, weight_lbs = ?, reps = ?, sets = ? 
-                      WHERE log_id = ?
-                      `,
-                      [exerciseId, weight, reps, sets, id],
-                      function (err) {
-                        if (err) {
-                          return res
-                            .status(500)
-                            .json({ error: "Failed to update exercise log" });
-                        }
-
-                        if (this.changes === 0) {
-                          return res
-                            .status(404)
-                            .json({ error: "Log not found" });
-                        }
-
-                        res.json({
-                          id,
-                          exercise,
-                          weight_lbs: weight,
-                          reps,
-                          sets,
-                          bodyweight_lbs: bodyweight,
-                        });
-                      },
-                    );
-                  },
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  });
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+    }
+  );
+});
 
 // Start the server
 const PORT = process.env.PORT || 3000;
