@@ -9,20 +9,18 @@ Source: https://github.com/kevinhocs/workout-logger
 
 ## Overview
 
-- Logs workouts by tracking the top working set per exercise along with total working sets performed.
-- Enforces domain constraints through frontend validation and backend verification
-- Stores and retrieves workout data via a REST API
-- Persists workout data using SQLite with normalized relational schema
-- Runs in a production environment with HTTPS and reverse proxy routing
+- Logs workouts by recording individual working sets per exercise within each workout session.
+- Enforces domain constraints through frontend validation and backend verification.
+- Stores and retrieves workout data via a REST API.
+- Persists workout data using SQLite with normalized relational schema.
+- Runs in a production environment with HTTPS and reverse proxy routing.
 
 The project prioritizes backend correctness and deployment realism over UI complexity.
 
 ## Tech Stack
 
 - Frontend: React (Vite production build)
-
 - Backend: Node.js, Express, SQLite
-
 - Infrastructure: AWS EC2 (Amazon Linux), Nginx, PM2, HTTPS, TLS
 
 ## Production Architecture
@@ -56,12 +54,14 @@ This separation allows Nginx to handle TLS, static file serving, and request rou
 The backend uses a normalized relational schema backed by SQLite.
 Workout data is organized across three core entities:
 
-- **Workout** — represents a workout session, uniquely identified by date
+- **Workout** — represents a workout session (grouped by date)
 - **Exercise** — reusable exercise definitions
-- **ExerciseLog** — junction table storing sets, reps, and weight per exercise per workout
+- **Set** — an individual working set linking an exercise to a workout
+
+Each set records weight and repetitions independently, allowing variation across sets and enabling accurate training volume calculations.
 
 Foreign key constraints and cascading deletes are enforced at the database level.
-The schema and ERD are documented in `/docs/data-model.md`.
+The schema is documented in `/docs/data-model.md`.
 
 
 
@@ -71,7 +71,7 @@ frontend/ React client
 
 backend/ Express REST API
 
-docs/ Design documentation and ERD
+docs/ Design documentation
 ```
 
 ## Design
@@ -97,4 +97,3 @@ cd frontend
 npm install
 npm run dev
 ```
-
