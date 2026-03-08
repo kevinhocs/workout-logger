@@ -30,7 +30,8 @@ The goal of the MVP is to provide a minimal and reliable system for recording wo
 - Log a workout
 - View workout history
 - Edit an existing workout
-- Delete a workout
+- Delete individual exercises
+- Delete entire workout sessions
 - Persistent storage
 - Basic input validation
 
@@ -51,27 +52,31 @@ The goal of the MVP is to provide a minimal and reliable system for recording wo
 
 ## Data Model (Planned)
 
-The application uses a normalized relational data model designed to support
-workout grouping by date, exercise reuse, and efficient querying.
+The application uses a normalized relational schema designed to support
+workout sessions, reusable exercises, and per-set tracking.
 
 ### Workout
-Represents a single workout session, implicitly created per date.
-- workout_id
-- workout_date (unique)
+Represents a workout session.
+
+- workout_id (PK)
+- workout_date (DATE, UNIQUE, NOT NULL)
+- bodyweight_lbs (REAL, NOT NULL)
 
 ### Exercise
 Represents a reusable exercise definition.
-- exercise_id
-- name (unique)
 
-### ExerciseLog
-Represents a logged exercise performed during a workout.
-- log_id
-- workout_id (FK)
-- exercise_id (FK)
-- sets
-- reps
-- weight_lbs
+- exercise_id (PK)
+- name (TEXT, UNIQUE, NOT NULL)
+
+### Set
+Represents an individual working set performed during a workout.
+
+- set_id (PK)
+- workout_id (FK → Workout.workout_id)
+- exercise_id (FK → Exercise.exercise_id)
+- set_number (INTEGER)
+- weight_lbs (REAL)
+- reps (INTEGER)
 
 ## Actors
 
@@ -127,28 +132,31 @@ Flow:
 3. System removes the workout
 4. Workout no longer appears in history
 
-## Validation Rules (Planned)
+## Validation Rules
 
-- Exercise name is required and must be non-empty
-- Sets and reps must be positive integers
+- Exercise name must be non-empty
+- Each set must contain weight and reps
+- Reps must be positive integers
 - Weight must be a non-negative number
-- Date must be a valid date value
+- Bodyweight must be a positive number
+- Date must not be in the future
 
 ## User Interface Overview
 
 ### Log Workout Screen
+
 Elements:
 - Exercise name input
-- Sets input
-- Reps input
 - Weight input
-- Date input
-- Submit button
+- Reps input
+- Set tracking inputs
+- Workout date input
 
 Behavior:
-- Validate input on submission
-- Display error messages on invalid input
-- Redirect to workout history on success
+- Users can dynamically add or remove sets
+- Each set records weight and reps independently
+- Input validation occurs on submission
+- Workout history updates after submission
 
 ### Workout History Screen
 Elements:
