@@ -24,6 +24,8 @@ export default function WorkoutLog() {
   const [logs, setLogs] = useState([]); // fetched workout entries
   const [errors, setErrors] = useState({}); // validation messages
   const [editingLog, setEditingLog] = useState(null); // currently edited log
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [expandedSessions, setExpandedSessions] = useState(new Set());
 
   // --- Networking / effects ---
   const fetchLogs = async () => {
@@ -247,6 +249,26 @@ export default function WorkoutLog() {
     }
   };
 
+  // --- Delete whole workout ---
+  const handleDeleteWorkout = async (workoutId) => {
+    if (!window.confirm("Delete this entire workout?")) return;
+
+    try {
+      const res = await fetch(`/api/workouts/${workoutId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete workout");
+      }
+
+      await fetchLogs();
+    } catch (err) {
+      console.error("Error deleting workout:", err);
+      alert("Failed to delete workout.");
+    }
+  };
+
   // --- Edit handlers ---
   const startEdit = (exercise, session) => {
     const firstSetId = Array.isArray(exercise.sets) && exercise.sets.length > 0
@@ -376,60 +398,112 @@ export default function WorkoutLog() {
         </div>
       </form>
 
-      <h2>Workout Sessions</h2>
+      <div className="session-section">
+        <h2>Workout Sessions</h2>
+      </div>
 
       <div className="log-list">
-        {logs.map((session) => (
+        {logs.slice(0, visibleCount).map((session) => (
           <div key={session.id} className="session">
-            <h3>{session.date}</h3>
+            <div
+              className="session-header"
+              onClick={() =>
+                setExpandedSessions((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(session.id)) next.delete(session.id);
+                  else next.add(session.id);
+                  return next;
+                })
+              }
+            >
+              <span className="session-arrow">
+                {expandedSessions.has(session.id) ? "▼" : "▶"}
+              </span>
 
-            {session.bodyweight_lbs != null && (
-              <div className="session-bodyweight">
-                Bodyweight: {unit === "kg"
-                  ? `${round1(toKg(session.bodyweight_lbs))} kg`
-                  : `${session.bodyweight_lbs} lbs`}
-              </div>
-            )}
+              <span className="session-date">{session.date}</span>
 
-            {(session.exercises || []).map((exercise) => (
-              <div key={`${session.id}-${exercise.name}`} className="log-row">
-                <div className="log-meta">
-                  <div className="log-exercise-row">
-                    <div className="log-exercise">{exercise.name}</div>
+              {session.bodyweight_lbs != null && (
+                <span className="session-bw">
+                  • Bodyweight: {unit === "kg"
+                    ? `${round1(toKg(session.bodyweight_lbs))} kg`
+                    : `${session.bodyweight_lbs} lbs`}
+                </span>
+              )}
 
-                    <div className="exercise-actions">
-                      <button
-                        className="edit-btn"
-                        onClick={() => startEdit(exercise, session)}
-                      >
-                        Edit
-                      </button>
+              <button
+                className="delete-session"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteWorkout(session.id);
+                }}
+              >
+                🗑
+              </button>
+            </div>
 
-                      <button
-                        className="delete-btn"
-                        onClick={() => handleDelete(exercise.sets[0].id)}
-                      >
-                        Delete
-                      </button>
+            {expandedSessions.has(session.id) &&
+              (session.exercises || []).map((exercise) => (
+                <div key={`${session.id}-${exercise.name}`} className="log-row">
+                  <div className="log-meta">
+                    <div className="log-exercise-row">
+                      <div className="log-exercise">{exercise.name}</div>
+
+                      <div className="exercise-actions">
+                        <button
+                          className="edit-btn"
+                          onClick={() => startEdit(exercise, session)}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          className="delete-btn"
+                          onClick={() => handleDelete(exercise.sets[0].id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="log-details">
+                      <div className="set-header">
+                        <span>Set</span>
+                        <span>Weight</span>
+                        <span>Reps</span>
+                        <span></span>
+                      </div>
+
+                      {exercise.sets.map((set) => (
+                        <div key={set.id} className="set-line">
+                          <span>{set.set_number}</span>
+
+                          <span>
+                            {unit === "kg"
+                              ? `${round1(toKg(set.weight))} kg`
+                              : `${set.weight} lbs`}
+                          </span>
+
+                          <span>{set.reps}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-
-                  <div className="log-details">
-                    {exercise.sets.map((set) => (
-                      <div key={set.id} className="set-line">
-                        Set {set.set_number}:{" "}
-                        {unit === "kg"
-                          ? `${round1(toKg(set.weight))} kg`
-                          : `${set.weight} lbs`} × {set.reps}
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         ))}
       </div>
+
+      {visibleCount < logs.length && (
+        <div style={{ marginTop: "20px", textAlign: "center" }}>
+          <button
+            className="secondary"
+            onClick={() => setVisibleCount((v) => v + 10)}
+          >
+            Load Older Workouts
+          </button>
+        </div>
+      )}
     </div>
   );
 }
