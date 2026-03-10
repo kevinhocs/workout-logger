@@ -1,13 +1,9 @@
 import "./App.css";
 import { useState, useEffect } from "react";
 
-// WorkoutLog component
-// Controlled form that logs workouts to a simple /logs API.
 export default function WorkoutLog() {
-  // --- Unit state (display unit for weight inputs / labels) ---
   const [unit, setUnit] = useState("lbs");
 
-  // --- Form state (controlled inputs) ---
   const [form, setForm] = useState({
     date: "",
     exercise: "",
@@ -21,13 +17,12 @@ export default function WorkoutLog() {
   const [sets, setSets] = useState([{ weight: "", reps: "" }]);
 
   // --- Other UI state ---
-  const [logs, setLogs] = useState([]); // fetched workout entries
-  const [errors, setErrors] = useState({}); // validation messages
-  const [editingLog, setEditingLog] = useState(null); // currently edited log
+  const [logs, setLogs] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [editingLog, setEditingLog] = useState(null);
   const [visibleCount, setVisibleCount] = useState(10);
   const [expandedSessions, setExpandedSessions] = useState(new Set());
 
-  // --- Networking / effects ---
   const fetchLogs = async () => {
     const res = await fetch("/api/logs");
     const data = await res.json();
@@ -38,11 +33,9 @@ export default function WorkoutLog() {
     fetchLogs();
   }, []);
 
-  // --- Validation helper ---
   function validateForm(form) {
     const errors = {};
 
-    // Date must exist and not be in the future
     if (!form.date.trim()) {
       errors.date = "Date is required!";
     } else {
@@ -56,25 +49,20 @@ export default function WorkoutLog() {
       }
     }
 
-    // Required fields
     if (form.exercise.trim() === "") errors.exercise = "Exercise selection is required!";
     if (!sets.length || sets.some(s => s.weight === "")) {
       errors.weight = "Each set must have a weight.";
     }
     if (form.bodyweight === "") errors.bodyweight = "Bodyweight value is required!";
 
-    // Reps validation
-    // Reps validation (per set)
     if (!sets.length || sets.some((s) => s.reps === "")) {
       errors.reps = "Each set must have reps.";
     }
 
-    // Sets validation
     if (!sets.length) {
       errors.sets = "At least one set is required.";
     }
 
-    // Numeric checks for sets
     for (const s of sets) {
       if (!/^\d+(\.\d+)?$/.test(s.weight)) {
         errors.weight = "Set weights must be positive numbers.";
@@ -94,7 +82,7 @@ export default function WorkoutLog() {
     return errors;
   }
 
-  // --- Input change handler (controlled inputs) ---
+  // --- Input change handler ---
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -161,7 +149,7 @@ export default function WorkoutLog() {
     setUnit(nextUnit);
   };
 
-  // --- Submit handler (create or update) ---
+  // --- Submit handler ---
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -491,8 +479,7 @@ export default function WorkoutLog() {
                 </div>
               ))}
           </div>
-        ))}
-      </div>
+        ))}</div>
 
       {visibleCount < logs.length && (
         <div style={{ marginTop: "20px", textAlign: "center" }}>

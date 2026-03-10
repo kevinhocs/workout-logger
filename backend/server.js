@@ -4,27 +4,22 @@ const db = require("./db");
 const helmet = require("helmet");
 
 const app = express();
-// Enable CORS for local development / frontend access
 if (process.env.NODE_ENV === "development") {
   app.use(cors());
 }
 
 app.use(helmet());
 
-// Parse incoming JSON payloads into `req.body`
 app.use(express.json());
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
   next();
 });
 
-// SQLite-backed persistent using a normalized schema
-
 app.get("/", (req, res) => {
   res.json({ message: "Gym Tracker API is running" });
 });
 
-// Return all workout logs
 app.get("/api/logs", (req, res) => {
   const sql = `
     SELECT
@@ -96,13 +91,9 @@ app.get("/api/logs", (req, res) => {
   });
 });
 
-// Create a new exercise log entry (creates workouts/exercises as needed)
 app.post("/api/logs", (req, res) => {
   const { date, exercise, weight, reps, sets, bodyweight } = req.body;
 
-  // Accept either:
-  // 1) sets as array [{weight, reps}, ...]
-  // 2) legacy payload with weight/reps and numeric sets count
   let normalizedSets = [];
   if (Array.isArray(sets)) {
     normalizedSets = sets;
@@ -239,11 +230,9 @@ app.post("/api/logs", (req, res) => {
   );
 });
 
-// Delete a log by id
 app.delete("/api/logs/:id", (req, res) => {
   const { id } = req.params;
 
-  // Find workout and exercise for this set
   db.get(
     "SELECT workout_id, exercise_id FROM sets WHERE set_id = ?",
     [id],
@@ -254,7 +243,6 @@ app.delete("/api/logs/:id", (req, res) => {
 
       const { workout_id, exercise_id } = row;
 
-      // Delete ALL sets for that exercise in that workout
       db.run(
         "DELETE FROM sets WHERE workout_id = ? AND exercise_id = ?",
         [workout_id, exercise_id],
@@ -263,7 +251,6 @@ app.delete("/api/logs/:id", (req, res) => {
             return res.status(500).json({ error: "Failed to delete exercise sets" });
           }
 
-          // Check if workout still has sets
           db.get(
             "SELECT COUNT(*) AS count FROM sets WHERE workout_id = ?",
             [workout_id],
@@ -322,7 +309,6 @@ app.put("/api/exercises/:id", (req, res) => {
     }
   }
 
-  // Find workout + exercise for this set
   db.get(
     "SELECT workout_id, exercise_id FROM sets WHERE set_id = ?",
     [id],
@@ -333,7 +319,6 @@ app.put("/api/exercises/:id", (req, res) => {
 
       const { workout_id } = row;
 
-      // Update bodyweight
       db.run(
         "UPDATE workout SET bodyweight_lbs = ? WHERE workout_id = ?",
         [bodyweight, workout_id],
@@ -342,7 +327,6 @@ app.put("/api/exercises/:id", (req, res) => {
             return res.status(500).json({ error: "Failed to update bodyweight" });
           }
 
-          // Ensure exercise exists
           db.run(
             "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
             [exercise],
@@ -361,7 +345,6 @@ app.put("/api/exercises/:id", (req, res) => {
 
                   const exerciseId = exerciseRow.exercise_id;
 
-                  // Remove old sets for this exercise/workout
                   db.run(
                     "DELETE FROM sets WHERE workout_id = ? AND exercise_id = ?",
                     [workout_id, exerciseId],
@@ -401,7 +384,6 @@ app.put("/api/exercises/:id", (req, res) => {
   );
 });
 
-// Start the server
 const PORT = process.env.PORT || 3000;
 
 app.use((err, req, res, next) => {
