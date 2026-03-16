@@ -1,6 +1,7 @@
 import "./App.css";
 import { useState, useEffect } from "react";
 import { toKg, toLbs, round1 } from "./utils/units";
+import SetRow from "./components/SetRow";   
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
@@ -310,27 +311,14 @@ export default function WorkoutLog() {
             <label>Sets</label>
 
             {sets.map((set, index) => (
-              <div key={index} className="set-row">
-                <span>Set {index + 1}</span>
-
-                <input
-                  type="number"
-                  placeholder={`Weight (${unit})`}
-                  value={set.weight}
-                  onChange={(e) => updateSet(index, "weight", e.target.value)}
-                />
-
-                <input
-                  type="number"
-                  placeholder="Reps"
-                  value={set.reps}
-                  onChange={(e) => updateSet(index, "reps", e.target.value)}
-                />
-
-                <button type="button" onClick={() => removeSet(index)}>
-                  ✕
-                </button>
-              </div>
+              <SetRow
+                key={index}
+                set={set}
+                index={index}
+                unit={unit}
+                updateSet={updateSet}
+                removeSet={removeSet}
+              />
             ))}
 
             <button type="button" className="secondary" onClick={addSet}>
