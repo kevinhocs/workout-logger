@@ -119,8 +119,8 @@ export default function WorkoutLog() {
         if (!Number.isFinite(num)) return value;
 
         return nextUnit === "kg"
-          ? String(round1(num / KG_TO_LB))
-          : String(round1(num * KG_TO_LB));
+          ? String(round1(toKg(num)))
+          : String(round1(toLbs(num)));
       };
 
       return {
