@@ -1,5 +1,6 @@
 import "./App.css";
 import { useState, useEffect } from "react";
+import { toKg, toLbs, round1 } from "./utils/units";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
@@ -16,7 +17,6 @@ export default function WorkoutLog() {
 
   const [sets, setSets] = useState([{ weight: "", reps: "" }]);
 
-  // --- Other UI state ---
   const [logs, setLogs] = useState([]);
   const [errors, setErrors] = useState({});
   const [editingLog, setEditingLog] = useState(null);
@@ -82,7 +82,6 @@ export default function WorkoutLog() {
     return errors;
   }
 
-  // --- Input change handler ---
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -110,22 +109,6 @@ export default function WorkoutLog() {
     return count === 1 ? singular : plural;
   }
 
-  // --- Unit conversion helpers ---
-  const KG_TO_LB = 2.20462;
-  function toLbs(n) {
-    const num = Number(n);
-    return Number.isFinite(num) ? num * KG_TO_LB : NaN;
-  }
-  function round1(n) {
-    return Math.round(n * 10) / 10;
-  }
-  function toKg(weightLbs) {
-    const n = Number(weightLbs);
-    if (!Number.isFinite(n)) return NaN;
-    return n / KG_TO_LB;
-  }
-
-  // Toggle displayed unit and convert the current input weight if present
   const toggleWeightUnit = () => {
     const nextUnit = unit === "lbs" ? "kg" : "lbs";
 
@@ -149,7 +132,6 @@ export default function WorkoutLog() {
     setUnit(nextUnit);
   };
 
-  // --- Submit handler ---
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -186,14 +168,12 @@ export default function WorkoutLog() {
       let res;
 
       if (editingLog?.id) {
-        // UPDATE
         res = await fetch(`/api/exercises/${editingLog.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updatePayload),
         });
       } else {
-        // CREATE
         res = await fetch("/api/logs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -215,7 +195,6 @@ export default function WorkoutLog() {
     }
   };
 
-  // --- Delete handler ---
   const handleDelete = async (id) => {
     try {
       const res = await fetch(`/api/logs/${id}`, {
@@ -237,7 +216,6 @@ export default function WorkoutLog() {
     }
   };
 
-  // --- Delete whole workout ---
   const handleDeleteWorkout = async (workoutId) => {
     if (!window.confirm("Delete this entire workout?")) return;
 
@@ -257,7 +235,6 @@ export default function WorkoutLog() {
     }
   };
 
-  // --- Edit handlers ---
   const startEdit = (exercise, session) => {
     const firstSetId = Array.isArray(exercise.sets) && exercise.sets.length > 0
       ? exercise.sets[0].id
@@ -292,7 +269,6 @@ export default function WorkoutLog() {
     setSets([{ weight: "", reps: "" }]);
   };
 
-  // --- Render UI ---
   return (
     <div className="panel">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -479,7 +455,8 @@ export default function WorkoutLog() {
                 </div>
               ))}
           </div>
-        ))}</div>
+        ))}
+      </div>
 
       {visibleCount < logs.length && (
         <div style={{ marginTop: "20px", textAlign: "center" }}>
