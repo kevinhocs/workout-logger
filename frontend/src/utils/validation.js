@@ -16,12 +16,12 @@
 
     if (form.exercise.trim() === "") errors.exercise = "Exercise selection is required!";
     if (!sets.length || sets.some(s => s.weight === "")) {
-      errors.weight = "Each set must have a weight.";
+      if (!errors.weight) errors.weight = "Each set must have a weight.";
     }
     if (form.bodyweight === "") errors.bodyweight = "Bodyweight value is required!";
 
     if (!sets.length || sets.some((s) => s.reps === "")) {
-      errors.reps = "Each set must have reps.";
+      if (!errors.reps) errors.reps = "Each set must have reps.";
     }
 
     if (!sets.length) {
