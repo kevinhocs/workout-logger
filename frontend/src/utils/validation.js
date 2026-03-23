@@ -28,6 +28,7 @@ function validateForm(form, sets) {
     if (!errors.reps) errors.reps = "Each set must have reps.";
   }
 
+  if (sets.length) {
   for (const s of sets) {
     if (!/^\d+(\.\d+)?$/.test(s.weight)) {
       if (!errors.weight) errors.weight = "Set weights must be positive numbers.";
@@ -36,6 +37,7 @@ function validateForm(form, sets) {
       if (!errors.reps) errors.reps = "Set reps must be whole numbers.";
     }
   }
+    }
 
   if (form.bodyweight !== "") {
     if (!/^\d+(\.\d+)?$/.test(form.bodyweight)) {
