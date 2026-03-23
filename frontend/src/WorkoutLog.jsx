@@ -1,7 +1,7 @@
 import "./App.css";
 import { useState, useEffect } from "react";
 import { toKg, toLbs, round1 } from "./utils/units";
-import SetRow from "./components/SetRow";   
+import SetRow from "./components/SetRows";   
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
