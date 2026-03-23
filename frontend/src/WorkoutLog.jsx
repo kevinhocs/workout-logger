@@ -2,6 +2,7 @@ import "./App.css";
 import { useState, useEffect } from "react";
 import { toKg, toLbs, round1 } from "./utils/units";
 import SetRow from "./components/setRows";   
+import { validateForm } from "./utils/validation";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
@@ -88,7 +89,7 @@ export default function WorkoutLog() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const validationErrors = validateForm(form);
+    const validationErrors = validateForm(form, sets);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
