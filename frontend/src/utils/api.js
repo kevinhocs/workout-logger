@@ -12,7 +12,7 @@ export async function createWorkout(payload) {
   });
 
   if (!res.ok) throw new Error("Failed to create workout");
-  return await res.json();;
+  return await res.json();
 }
 
 export async function updateExercise(id, payload) {
