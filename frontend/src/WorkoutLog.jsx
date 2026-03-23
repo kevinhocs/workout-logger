@@ -1,8 +1,9 @@
 import "./App.css";
 import { useState, useEffect } from "react";
 import { toKg, toLbs, round1 } from "./utils/units";
-import SetRow from "./components/setRows";   
+import SetRow from "./components/setRows";
 import { validateForm } from "./utils/validation";
+import { getLogs, createWorkout, updateExercise, deleteLog, deleteWorkout } from "./utils/api";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
@@ -26,15 +27,13 @@ export default function WorkoutLog() {
   const [expandedSessions, setExpandedSessions] = useState(new Set());
 
   const fetchLogs = async () => {
-    const res = await fetch("/api/logs");
-    const data = await res.json();
+    const data = await getLogs();
     setLogs(data);
   };
 
   useEffect(() => {
     fetchLogs();
   }, []);
-
 
   const handleChange = (e) => {
     setForm({
@@ -119,24 +118,11 @@ export default function WorkoutLog() {
     };
 
     try {
-      let res;
 
       if (editingLog?.id) {
-        res = await fetch(`/api/exercises/${editingLog.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updatePayload),
-        });
+        await updateExercise(editingLog.id, updatePayload);
       } else {
-        res = await fetch("/api/logs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(createPayload),
-        });
-      }
-
-      if (!res.ok) {
-        throw new Error(`Submit failed with status ${res.status}`);
+        await createWorkout(createPayload);
       }
 
       await fetchLogs();
@@ -151,13 +137,7 @@ export default function WorkoutLog() {
 
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`/api/logs/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete log");
-      }
+      await deleteLog(id);
 
       if (editingLog && editingLog.id === id) {
         cancelEdit();
@@ -174,14 +154,7 @@ export default function WorkoutLog() {
     if (!window.confirm("Delete this entire workout?")) return;
 
     try {
-      const res = await fetch(`/api/workouts/${workoutId}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete workout");
-      }
-
+      await deleteWorkout(workoutId);
       await fetchLogs();
     } catch (err) {
       console.error("Error deleting workout:", err);
