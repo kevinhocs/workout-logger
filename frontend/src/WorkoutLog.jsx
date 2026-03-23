@@ -4,6 +4,7 @@ import { toKg, toLbs, round1 } from "./utils/units";
 import SetRow from "./components/setRows";   
 import { validateForm } from "./utils/validation";
 import { getLogs, createWorkout, updateExercise, deleteLog, deleteWorkout } from "./utils/api";
+import SessionList from "./components/SessionList";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
@@ -155,7 +156,7 @@ export default function WorkoutLog() {
     if (!window.confirm("Delete this entire workout?")) return;
 
     try {
-await deleteWorkout(workoutId);
+      await deleteWorkout(workoutId);
       await fetchLogs();
     } catch (err) {
       console.error("Error deleting workout:", err);
@@ -279,6 +280,19 @@ await deleteWorkout(workoutId);
 
       <div className="session-section">
         <h2>Workout Sessions</h2>
+        <SessionList
+          logs={logs}
+          visibleCount={visibleCount}
+          setVisibleCount={setVisibleCount}
+          expandedSessions={expandedSessions}
+          setExpandedSessions={setExpandedSessions}
+          unit={unit}
+          handleDelete={handleDelete}
+          handleDeleteWorkout={handleDeleteWorkout}
+          startEdit={startEdit}
+          round1={round1}
+          toKg={toKg}
+        />
       </div>
     </div>
   );

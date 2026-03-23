@@ -1,4 +1,4 @@
-export default function sessionList(props) {
+export default function SessionList(props) {
   const {
     logs,
     visibleCount,
