@@ -29,20 +29,23 @@ function validateForm(form, sets) {
   }
 
   if (sets.length) {
-  for (const s of sets) {
-    if (!/^\d+(\.\d+)?$/.test(s.weight)) {
-      if (!errors.weight) errors.weight = "Set weights must be positive numbers.";
-    }
-    if (!/^\d+$/.test(s.reps)) {
-      if (!errors.reps) errors.reps = "Set reps must be whole numbers.";
+    for (const s of sets) {
+      const weight = Number(s.weight);
+      if (!Number.isFinite(weight) || weight <= 0) {
+        if (!errors.weight) errors.weight = "Set weights must be positive numbers.";
+      }
+      const reps = Number(s.reps);
+      if (!Number.isInteger(reps) || reps <= 0) {
+        if (!errors.reps) errors.reps = "Set reps must be whole numbers.";
+      }
     }
   }
-    }
 
   if (form.bodyweight !== "") {
-    if (!/^\d+(\.\d+)?$/.test(form.bodyweight)) {
+    const bw = Number(form.bodyweight);
+    if (!Number.isFinite(bw)) {
       errors.bodyweight = "Bodyweight must be a positive number (decimals allowed)";
-    } else if (Number(form.bodyweight) <= 0) {
+    } else if (bw <= 0) {
       errors.bodyweight = "Bodyweight must be greater than 0.";
     }
   }
