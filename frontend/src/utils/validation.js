@@ -1,4 +1,4 @@
-  function validateForm(form) {
+  function validateForm(form, sets) {
     const errors = {};
 
     if (!form.date.trim()) {
