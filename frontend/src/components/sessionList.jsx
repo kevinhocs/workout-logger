@@ -1,3 +1,20 @@
+export default function SessionList(props) {
+  const {
+    logs,
+    visibleCount,
+    setVisibleCount,
+    expandedSessions,
+    setExpandedSessions,
+    unit,
+    handleDelete,
+    handleDeleteWorkout,
+    startEdit,
+    round1,
+    toKg
+  } = props;
+
+  return (
+    <>
       <div className="log-list">
         {logs.slice(0, visibleCount).map((session) => (
           <div key={session.id} className="session">
@@ -100,3 +117,6 @@
           </button>
         </div>
       )}
+    </>
+  );
+}
