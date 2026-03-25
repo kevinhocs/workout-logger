@@ -52,16 +52,18 @@ export default function WorkoutLog() {
       </div>
 
       <WorkoutForm
-        form={form}
-        setForm={setForm}
-        sets={sets}
-        setSets={setSets}
+        formState={{
+          form,
+          setForm,
+          sets,
+          setSets,
+          errors,
+          setErrors,
+          editingLog,
+          setEditingLog,
+        }}
         unit={unit}
         setUnit={setUnit}
-        errors={errors}
-        setErrors={setErrors}
-        editingLog={editingLog}
-        setEditingLog={setEditingLog}
         fetchLogs={fetchLogs}
       />
 

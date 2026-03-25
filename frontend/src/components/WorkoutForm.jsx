@@ -3,20 +3,17 @@ import SetRow from "./setRows";
 import { validateForm } from "../utils/validation";
 import { createWorkout, updateExercise } from "../utils/api";
 
-export default function WorkoutForm(props) {
+export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
   const {
-    form,
-    setForm,
-    sets,
-    setSets,
-    unit,
-    setUnit,
-    errors,
-    setErrors,
-    editingLog,
-    setEditingLog,
-    fetchLogs
-  } = props;
+  form,
+  setForm,
+  sets,
+  setSets,
+  errors,
+  setErrors,
+  editingLog,
+  setEditingLog
+} = formState;
 
   const handleChange = (e) => {
     setForm({
