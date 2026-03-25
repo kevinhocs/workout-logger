@@ -8,7 +8,7 @@ import useWorkoutForm from "./hooks/useWorkoutForm";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
-  const { form, setForm, sets, setSets, editingLog, setEditingLog, resetForm } = useWorkoutForm();
+  const { form, setForm, sets, setSets, editingLog, setEditingLog, resetForm, startEdit } = useWorkoutForm({ unit, toKg, round1 });
   const [logs, setLogs] = useState([]);
   const [errors, setErrors] = useState({});
   const [visibleCount, setVisibleCount] = useState(10);
@@ -52,33 +52,6 @@ export default function WorkoutLog() {
       console.error("Error deleting workout:", err);
       alert("Failed to delete workout.");
     }
-  };
-
-  const startEdit = (exercise, session) => {
-    const firstSetId = Array.isArray(exercise.sets) && exercise.sets.length > 0
-      ? exercise.sets[0].id
-      : null;
-
-    setEditingLog({ id: firstSetId, name: exercise.name });
-    setErrors({});
-
-    setForm({
-      date: session.date,
-      exercise: exercise.name,
-      bodyweight: session.bodyweight_lbs ?? "",
-      notes: "",
-    });
-
-    setSets(
-      exercise.sets.map((s) => ({
-        weight: String(
-          unit === "kg"
-            ? round1(toKg(s.weight))
-            : s.weight,
-        ),
-        reps: String(s.reps),
-      })),
-    );
   };
 
   const cancelEdit = () => {
