@@ -11,8 +11,12 @@ export default function useWorkoutForm() {
     bodyweight: "",
   });
 
+  const [sets, setSets] = useState([{ weight: "", reps: "" }]);
+
   return {
     form,
     setForm,
+    sets,
+    setSets,
   };
 }
