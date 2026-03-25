@@ -9,9 +9,18 @@ import useWorkoutActions from "./hooks/useWorkoutActions";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
-  const { form, setForm, sets, setSets, editingLog, setEditingLog, resetForm, startEdit } = useWorkoutForm({ unit, toKg, round1 });
+  const { form, 
+    setForm, 
+    sets, 
+    setSets, 
+    editingLog, 
+    setEditingLog, 
+    resetForm, 
+    startEdit, 
+    errors, 
+    setErrors 
+  } = useWorkoutForm({ unit, toKg, round1 });
   const { logs, fetchLogs } = useWorkoutLogs();
-  const [errors, setErrors] = useState({});
   const [visibleCount, setVisibleCount] = useState(10);
   const [expandedSessions, setExpandedSessions] = useState(new Set());
 
