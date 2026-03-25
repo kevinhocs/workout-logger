@@ -1,27 +1,19 @@
 import "./App.css";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toKg, toLbs, round1 } from "./utils/units";
-import { getLogs, deleteLog, deleteWorkout } from "./utils/api";
+import { deleteLog, deleteWorkout } from "./utils/api";
 import SessionList from "./components/SessionList";
 import WorkoutForm from "./components/WorkoutForm";
 import useWorkoutForm from "./hooks/useWorkoutForm";
+import useWorkoutLogs from "./hooks/useWorkoutLogs";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
   const { form, setForm, sets, setSets, editingLog, setEditingLog, resetForm, startEdit } = useWorkoutForm({ unit, toKg, round1 });
-  const [logs, setLogs] = useState([]);
+  const { logs, fetchLogs } = useWorkoutLogs();
   const [errors, setErrors] = useState({});
   const [visibleCount, setVisibleCount] = useState(10);
   const [expandedSessions, setExpandedSessions] = useState(new Set());
-
-  const fetchLogs = async () => {
-    const data = await getLogs();
-    setLogs(data);
-  };
-
-  useEffect(() => {
-    fetchLogs();
-  }, []);
 
   const toggleWeightUnit = () => {
     setUnit((prev) => (prev === "lbs" ? "kg" : "lbs"));
