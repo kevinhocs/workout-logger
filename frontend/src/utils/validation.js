@@ -31,7 +31,7 @@ export function validateForm(form, sets) {
   if (sets.length) {
     for (const s of sets) {
       const weight = Number(s.weight);
-      if (!Number.isFinite(weight) || weight <= 0) {
+      if (!Number.isFinite(weight) || weight < 0) {
         if (!errors.weight) errors.weight = "Set weights must be positive numbers.";
       }
       const reps = Number(s.reps);
