@@ -18,7 +18,7 @@ export default function WorkoutForm(props) {
     fetchLogs
   } = props;
 
-    const handleChange = (e) => {
+  const handleChange = (e) => {
     setForm({
       ...form,
       [e.target.name]: e.target.value,
@@ -29,19 +29,19 @@ export default function WorkoutForm(props) {
     setSets([...sets, { weight: "", reps: "" }]);
   }
 
-    function removeSet(index) {
+  function removeSet(index) {
     const updated = [...sets];
     updated.splice(index, 1);
     setSets(updated);
   }
 
-   function updateSet(index, field, value) {
+  function updateSet(index, field, value) {
     const updated = [...sets];
     updated[index][field] = value;
     setSets(updated);
   }
 
-    const toggleWeightUnit = () => {
+  const toggleWeightUnit = () => {
     const nextUnit = unit === "lbs" ? "kg" : "lbs";
 
     setForm((prev) => {
@@ -64,7 +64,7 @@ export default function WorkoutForm(props) {
     setUnit(nextUnit);
   };
 
-    const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const validationErrors = validateForm(form, sets);
@@ -97,7 +97,6 @@ export default function WorkoutForm(props) {
     };
 
     try {
-
       if (editingLog?.id) {
         await updateExercise(editingLog.id, updatePayload);
       } else {
@@ -105,16 +104,14 @@ export default function WorkoutForm(props) {
       }
 
       await fetchLogs();
-      setEditingLog(null);
-      setForm({ date: "", exercise: "", weight: "", reps: "", sets: "", notes: "", bodyweight: "" });
-      setSets([{ weight: "", reps: "" }]);
+      cancelEdit();
     } catch (err) {
       console.error("Error submitting log:", err);
       alert("Failed to save workout. Server may be unavailable.");
     }
   };
 
-   const cancelEdit = () => {
+  const cancelEdit = () => {
     setEditingLog(null);
     setErrors({});
     setForm({ date: "", exercise: "", weight: "", reps: "", sets: "", bodyweight: "", notes: "" });
@@ -122,68 +119,68 @@ export default function WorkoutForm(props) {
   };
 
   return (
-          <form onSubmit={handleSubmit}>
-            <div className="form-stack">
-              <div className="field">
-                <label>Date</label>
-                <input
-                  type="date"
-                  name="date"
-                  value={form.date}
-                  max={new Date().toISOString().split("T")[0]}
-                  onChange={handleChange}
-                  disabled={!!editingLog}
-                />
-                {errors.date && <span className="error" role="alert">{errors.date}</span>}
-              </div>
-    
-              <div className="field">
-                <label>Exercise</label>
-                <input name="exercise" value={form.exercise} placeholder="e.g., Bench Press" onChange={handleChange} />
-                {errors.exercise && <span className="error" role="alert">{errors.exercise}</span>}
-              </div>
-    
-              <div className="field">
-                <label>Sets</label>
-    
-                {sets.map((set, index) => (
-                  <SetRow
-                    key={index}
-                    set={set}
-                    index={index}
-                    unit={unit}
-                    updateSet={updateSet}
-                    removeSet={removeSet}
-                  />
-                ))}
-    
-                <button type="button" className="secondary" onClick={addSet}>
-                  + Add Set
-                </button>
-              </div>
-    
-              <div className="field">
-                <label>Bodyweight ({unit})</label>
-                <input type="number" name="bodyweight" value={form.bodyweight} onChange={handleChange} min="0" step="any" />
-                {errors.bodyweight && <span className="error" role="alert">{errors.bodyweight}</span>}
-              </div>
-    
-              <div className="field">
-                <label>Notes</label>
-                <input name="notes" value={form.notes} onChange={handleChange} />
-              </div>
-            </div>
-    
-            <div className="panel-footer">
-              {editingLog && (
-                <button type="button" className="secondary" onClick={cancelEdit}>
-                  Cancel
-                </button>
-              )}
-              <button type="submit" className="primary">
-                {editingLog ? "Update Workout" : "Log Workout"}
-              </button>
-            </div>
-          </form>
+    <form onSubmit={handleSubmit}>
+      <div className="form-stack">
+        <div className="field">
+          <label>Date</label>
+          <input
+            type="date"
+            name="date"
+            value={form.date}
+            max={new Date().toISOString().split("T")[0]}
+            onChange={handleChange}
+            disabled={!!editingLog}
+          />
+          {errors.date && <span className="error" role="alert">{errors.date}</span>}
+        </div>
+
+        <div className="field">
+          <label>Exercise</label>
+          <input name="exercise" value={form.exercise} placeholder="e.g., Bench Press" onChange={handleChange} />
+          {errors.exercise && <span className="error" role="alert">{errors.exercise}</span>}
+        </div>
+
+        <div className="field">
+          <label>Sets</label>
+
+          {sets.map((set, index) => (
+            <SetRow
+              key={index}
+              set={set}
+              index={index}
+              unit={unit}
+              updateSet={updateSet}
+              removeSet={removeSet}
+            />
+          ))}
+
+          <button type="button" className="secondary" onClick={addSet}>
+            + Add Set
+          </button>
+        </div>
+
+        <div className="field">
+          <label>Bodyweight ({unit})</label>
+          <input type="number" name="bodyweight" value={form.bodyweight} onChange={handleChange} min="0" step="any" />
+          {errors.bodyweight && <span className="error" role="alert">{errors.bodyweight}</span>}
+        </div>
+
+        <div className="field">
+          <label>Notes</label>
+          <input name="notes" value={form.notes} onChange={handleChange} />
+        </div>
+      </div>
+
+      <div className="panel-footer">
+        {editingLog && (
+          <button type="button" className="secondary" onClick={cancelEdit}>
+            Cancel
+          </button>
+        )}
+        <button type="submit" className="primary">
+          {editingLog ? "Update Workout" : "Log Workout"}
+        </button>
+      </div>
+    </form>
   );
 }
