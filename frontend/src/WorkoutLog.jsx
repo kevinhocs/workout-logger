@@ -8,10 +8,9 @@ import useWorkoutForm from "./hooks/useWorkoutForm";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
-  const { form, setForm, sets, setSets } = useWorkoutForm();
+  const { form, setForm, sets, setSets, editingLog, setEditingLog } = useWorkoutForm();
   const [logs, setLogs] = useState([]);
   const [errors, setErrors] = useState({});
-  const [editingLog, setEditingLog] = useState(null);
   const [visibleCount, setVisibleCount] = useState(10);
   const [expandedSessions, setExpandedSessions] = useState(new Set());
 
