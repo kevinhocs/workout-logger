@@ -1,4 +1,4 @@
-import { toKg, toLbs, round1 } from "../utils/units";
+import { toLbs, round1 } from "../utils/units";
 import SetRow from "./setRows";
 import { validateForm } from "../utils/validation";
 import { createWorkout, updateExercise } from "../utils/api";
@@ -39,28 +39,21 @@ export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
     setSets(updated);
   }
 
-  const toggleWeightUnit = () => {
-    const nextUnit = unit === "lbs" ? "kg" : "lbs";
+  const buildSetsPayload = (sets, unit) => {
+  return sets.map((s) => {
+    const weightInput = Number(s.weight);
 
-    setForm((prev) => {
-      const convert = (value) => {
-        const num = Number(value);
-        if (!Number.isFinite(num)) return value;
+    const weightInLbs =
+      unit === "kg"
+        ? round1(toLbs(weightInput))
+        : weightInput;
 
-        return nextUnit === "kg"
-          ? String(round1(toKg(num)))
-          : String(round1(toLbs(num)));
-      };
-
-      return {
-        ...prev,
-        weight: convert(prev.weight),
-        bodyweight: convert(prev.bodyweight),
-      };
-    });
-
-    setUnit(nextUnit);
-  };
+    return {
+      weight: weightInLbs,
+      reps: Number(s.reps),
+    };
+  });
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -69,19 +62,7 @@ export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
-    const setsPayload = sets.map((s) => {
-      const weightInput = Number(s.weight);
-
-      const weightInLbs =
-        unit === "kg"
-          ? round1(toLbs(weightInput))
-          : weightInput;
-
-      return {
-        weight: weightInLbs,
-        reps: Number(s.reps),
-      };
-    });
+    const setsPayload = buildSetsPayload(sets, unit);
 
     const updatePayload = {
       exercise: form.exercise,
