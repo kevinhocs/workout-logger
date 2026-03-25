@@ -1,11 +1,11 @@
 import "./App.css";
 import { useState } from "react";
-import { toKg, toLbs, round1 } from "./utils/units";
-import { deleteLog, deleteWorkout } from "./utils/api";
+import { toKg, round1 } from "./utils/units";
 import SessionList from "./components/SessionList";
 import WorkoutForm from "./components/WorkoutForm";
 import useWorkoutForm from "./hooks/useWorkoutForm";
 import useWorkoutLogs from "./hooks/useWorkoutLogs";
+import useWorkoutActions from "./hooks/useWorkoutActions";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
@@ -19,37 +19,12 @@ export default function WorkoutLog() {
     setUnit((prev) => (prev === "lbs" ? "kg" : "lbs"));
   };
 
-  const handleDelete = async (id) => {
-    try {
-      await deleteLog(id);
-
-      if (editingLog && editingLog.id === id) {
-        cancelEdit();
-      }
-
-      await fetchLogs();
-    } catch (err) {
-      console.error("Error deleting log:", err);
-      alert(err.message);
-    }
-  };
-
-  const handleDeleteWorkout = async (workoutId) => {
-    if (!window.confirm("Delete this entire workout?")) return;
-
-    try {
-      await deleteWorkout(workoutId);
-      await fetchLogs();
-    } catch (err) {
-      console.error("Error deleting workout:", err);
-      alert("Failed to delete workout.");
-    }
-  };
-
   const cancelEdit = () => {
     setErrors({});
     resetForm();
   };
+
+  const { handleDelete, handleDeleteWorkout } = useWorkoutActions({ editingLog, cancelEdit, fetchLogs });
 
   return (
     <div className="panel">
