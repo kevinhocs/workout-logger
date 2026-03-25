@@ -13,6 +13,7 @@ export default function useWorkoutForm({unit, toKg, round1}) {
 
   const [sets, setSets] = useState([{ weight: "", reps: "" }]);
   const [editingLog, setEditingLog] = useState(null);
+    const [errors, setErrors] = useState({});
   const resetForm = () => {
     setForm({
       date: "",
@@ -61,6 +62,8 @@ export default function useWorkoutForm({unit, toKg, round1}) {
     editingLog,
     setEditingLog,
     resetForm,
-    startEdit
+    startEdit,
+    errors,
+    setErrors,
   };
 }
