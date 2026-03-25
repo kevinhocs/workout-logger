@@ -28,6 +28,11 @@ export default function useWorkoutForm({unit, toKg, round1}) {
     setEditingLog(null);
   }
 
+  const cancelEdit = () => {
+    setErrors({});
+    resetForm();
+  };
+
     const startEdit = (exercise, session) => {
       const firstSetId = Array.isArray(exercise.sets) && exercise.sets.length > 0
         ? exercise.sets[0].id
@@ -65,5 +70,6 @@ export default function useWorkoutForm({unit, toKg, round1}) {
     startEdit,
     errors,
     setErrors,
+    cancelEdit,
   };
 }

@@ -18,7 +18,8 @@ export default function WorkoutLog() {
     resetForm, 
     startEdit, 
     errors, 
-    setErrors 
+    setErrors,
+    cancelEdit
   } = useWorkoutForm({ unit, toKg, round1 });
   const { logs, fetchLogs } = useWorkoutLogs();
   const [visibleCount, setVisibleCount] = useState(10);
@@ -26,11 +27,6 @@ export default function WorkoutLog() {
 
   const toggleWeightUnit = () => {
     setUnit((prev) => (prev === "lbs" ? "kg" : "lbs"));
-  };
-
-  const cancelEdit = () => {
-    setErrors({});
-    resetForm();
   };
 
   const { handleDelete, handleDeleteWorkout } = useWorkoutActions({ editingLog, cancelEdit, fetchLogs });
@@ -61,6 +57,7 @@ export default function WorkoutLog() {
           setErrors,
           editingLog,
           setEditingLog,
+          cancelEdit
         }}
         unit={unit}
         setUnit={setUnit}

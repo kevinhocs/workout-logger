@@ -12,7 +12,8 @@ export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
   errors,
   setErrors,
   editingLog,
-  setEditingLog
+  setEditingLog,
+  cancelEdit
 } = formState;
 
   const handleChange = (e) => {
@@ -106,13 +107,6 @@ export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
       console.error("Error submitting log:", err);
       alert("Failed to save workout. Server may be unavailable.");
     }
-  };
-
-  const cancelEdit = () => {
-    setEditingLog(null);
-    setErrors({});
-    setForm({ date: "", exercise: "", weight: "", reps: "", sets: "", bodyweight: "", notes: "" });
-    setSets([{ weight: "", reps: "" }]);
   };
 
   return (
