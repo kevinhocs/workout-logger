@@ -4,22 +4,12 @@ import { toKg, toLbs, round1 } from "./utils/units";
 import { getLogs, deleteLog, deleteWorkout } from "./utils/api";
 import SessionList from "./components/SessionList";
 import WorkoutForm from "./components/WorkoutForm";
+import useWorkoutForm from "./hooks/useWorkoutForm";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
-
-  const [form, setForm] = useState({
-    date: "",
-    exercise: "",
-    weight: "",
-    reps: "",
-    sets: "",
-    notes: "",
-    bodyweight: "",
-  });
-
+  const { form, setForm } = useWorkoutForm();
   const [sets, setSets] = useState([{ weight: "", reps: "" }]);
-
   const [logs, setLogs] = useState([]);
   const [errors, setErrors] = useState({});
   const [editingLog, setEditingLog] = useState(null);
