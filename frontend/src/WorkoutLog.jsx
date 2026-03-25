@@ -8,8 +8,7 @@ import useWorkoutForm from "./hooks/useWorkoutForm";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
-  const { form, setForm } = useWorkoutForm();
-  const [sets, setSets] = useState([{ weight: "", reps: "" }]);
+  const { form, setForm, sets, setSets } = useWorkoutForm();
   const [logs, setLogs] = useState([]);
   const [errors, setErrors] = useState({});
   const [editingLog, setEditingLog] = useState(null);
