@@ -36,26 +36,7 @@ export default function WorkoutLog() {
   }, []);
 
   const toggleWeightUnit = () => {
-    const nextUnit = unit === "lbs" ? "kg" : "lbs";
-
-    setForm((prev) => {
-      const convert = (value) => {
-        const num = Number(value);
-        if (!Number.isFinite(num)) return value;
-
-        return nextUnit === "kg"
-          ? String(round1(toKg(num)))
-          : String(round1(toLbs(num)));
-      };
-
-      return {
-        ...prev,
-        weight: convert(prev.weight),
-        bodyweight: convert(prev.bodyweight),
-      };
-    });
-
-    setUnit(nextUnit);
+    setUnit((prev) => (prev === "lbs" ? "kg" : "lbs"));
   };
 
   const handleDelete = async (id) => {
