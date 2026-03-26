@@ -30,7 +30,8 @@ app.get("/api/logs", (req, res) => {
       s.set_number,
       e.name AS exercise,
       s.weight_lbs,
-      s.reps
+      s.reps,
+      s.notes
     FROM workout w
     JOIN sets s ON w.workout_id = s.workout_id
     JOIN exercise e ON s.exercise_id = e.exercise_id
@@ -60,8 +61,13 @@ app.get("/api/logs", (req, res) => {
       if (!sessions[workoutId].exercises[row.exercise]) {
         sessions[workoutId].exercises[row.exercise] = {
           name: row.exercise,
+          notes: null,
           sets: [],
         };
+      }
+
+      if (row.notes) {
+        sessions[workoutId].exercises[row.exercise].notes = row.notes;
       }
 
       sessions[workoutId].exercises[row.exercise].sets.push({
@@ -92,7 +98,7 @@ app.get("/api/logs", (req, res) => {
 });
 
 app.post("/api/logs", (req, res) => {
-  const { date, exercise, weight, reps, sets, bodyweight } = req.body;
+  const { date, exercise, weight, reps, sets, bodyweight, notes } = req.body;
 
   let normalizedSets = [];
   if (Array.isArray(sets)) {
@@ -200,8 +206,8 @@ app.post("/api/logs", (req, res) => {
 
                   normalizedSets.forEach((set, index) => {
                     db.run(
-                      "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps) VALUES (?, ?, ?, ?, ?)",
-                      [workoutId, exerciseId, index + 1, set.weight, set.reps],
+                      "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps, notes) VALUES (?, ?, ?, ?, ?, ?)",
+                      [workoutId, exerciseId, index + 1, set.weight, set.reps, index === 0 ? notes || null : null],
                       function (err) {
                         if (err) {
                           return res.status(500).json({ error: "Failed to create set" });
@@ -292,7 +298,7 @@ app.delete("/api/workouts/:id", (req, res) => {
 // Update a log by id
 app.put("/api/exercises/:id", (req, res) => {
   const { id } = req.params;
-  const { exercise, sets, bodyweight } = req.body;
+  const { exercise, sets, bodyweight, notes } = req.body;
 
   if (!exercise || !Array.isArray(sets) || sets.length === 0 || bodyweight == null) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -357,8 +363,8 @@ app.put("/api/exercises/:id", (req, res) => {
 
                       sets.forEach((set, index) => {
                         db.run(
-                          "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps) VALUES (?, ?, ?, ?, ?)",
-                          [workout_id, exerciseId, index + 1, set.weight, set.reps],
+                          "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps, notes) VALUES (?, ?, ?, ?, ?, ?)",
+                          [workout_id, exerciseId, index + 1, set.weight, set.reps, index === 0 ? notes || null : null],
                           function (err) {
                             if (err) {
                               return res.status(500).json({ error: "Insert failed" });

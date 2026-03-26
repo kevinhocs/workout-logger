@@ -55,6 +55,7 @@ export default function useWorkoutForm({unit, toKg, round1}) {
               : s.weight,
           ),
           reps: String(s.reps),
+          notes: s.notes ?? "",
         })),
       );
     };

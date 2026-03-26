@@ -63,11 +63,14 @@ export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
     if (Object.keys(validationErrors).length > 0) return;
 
     const setsPayload = buildSetsPayload(sets, unit);
+    console.log("SETS STATE:", sets);
+    console.log("SETS PAYLOAD:", setsPayload);
 
     const updatePayload = {
       exercise: form.exercise,
       sets: setsPayload,
       bodyweight: Number(form.bodyweight),
+      notes: form.notes || null,
     };
 
     const createPayload = {
