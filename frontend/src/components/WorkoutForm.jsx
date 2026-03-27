@@ -19,17 +19,18 @@ import { createWorkout, updateExercise } from "../utils/api";
   });
 };
 
-export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
+export default function WorkoutForm({ formState, unit, fetchLogs }) {
   const {
   form,
   setForm,
   sets,
-  setSets,
   errors,
   setErrors,
   editingLog,
-  setEditingLog,
-  cancelEdit
+  cancelEdit,
+  addSet,
+  removeSet,
+  updateSet
 } = formState;
 
 
@@ -39,21 +40,6 @@ export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
       [e.target.name]: e.target.value,
     });
   };
-
-  function addSet() {
-    setSets([...sets, { weight: "", reps: "" }]);
-  }
-
-  function removeSet(index) {
-    setSets(sets.filter((_, i) => i !== index));
-  }
-
-  function updateSet(index, field, value) {
-  const updated = sets.map((s, i) =>
-    i === index ? { ...s, [field]: value } : s
-  );
-    setSets(updated);
-  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

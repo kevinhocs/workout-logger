@@ -4,9 +4,6 @@ export default function useWorkoutForm({unit, toKg, round1}) {
   const [form, setForm] = useState({
     date: "",
     exercise: "",
-    weight: "",
-    reps: "",
-    sets: "",
     notes: "",
     bodyweight: "",
   });
@@ -18,9 +15,6 @@ export default function useWorkoutForm({unit, toKg, round1}) {
     setForm({
       date: "",
       exercise: "",
-      weight: "",
-      reps: "",
-      sets: "",
       notes: "",
       bodyweight: "",
     });
@@ -60,17 +54,34 @@ export default function useWorkoutForm({unit, toKg, round1}) {
       );
     };
 
+      function addSet() {
+    setSets((prev) => [...prev, { weight: "", reps: "" }]);
+  }
+
+    function removeSet(index) {
+    setSets((prev) => prev.filter((_, i) => i !== index));
+  }
+
+    function updateSet(index, field, value) {
+    setSets((prev) =>
+      prev.map((s, i) =>
+        i === index ? { ...s, [field]: value } : s
+      )
+    );
+  }
+  
   return {
     form,
     setForm,
     sets,
-    setSets,
     editingLog,
-    setEditingLog,
     resetForm,
     startEdit,
     errors,
     setErrors,
     cancelEdit,
+    addSet,
+    removeSet,
+    updateSet,
   };
 }
