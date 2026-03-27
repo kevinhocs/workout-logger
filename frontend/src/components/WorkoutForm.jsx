@@ -22,7 +22,6 @@ import { createWorkout, updateExercise } from "../utils/api";
 export default function WorkoutForm({ formState, unit, fetchLogs }) {
   const {
   form,
-  setForm,
   sets,
   errors,
   setErrors,
@@ -30,15 +29,13 @@ export default function WorkoutForm({ formState, unit, fetchLogs }) {
   cancelEdit,
   addSet,
   removeSet,
-  updateSet
+  updateSet,
+  updateField,
 } = formState;
 
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    updateField(e.target.name, e.target.value);
   };
 
   const handleSubmit = async (e) => {

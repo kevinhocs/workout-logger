@@ -69,10 +69,16 @@ export default function useWorkoutForm({unit, toKg, round1}) {
       )
     );
   }
+
+  function updateField(name, value) {
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
   
   return {
     form,
-    setForm,
     sets,
     editingLog,
     resetForm,
@@ -83,5 +89,6 @@ export default function useWorkoutForm({unit, toKg, round1}) {
     addSet,
     removeSet,
     updateSet,
+    updateField,
   };
 }
