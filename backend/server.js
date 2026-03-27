@@ -31,7 +31,7 @@ app.get("/api/logs", (req, res) => {
       e.name AS exercise,
       s.weight_lbs,
       s.reps,
-      s.notes
+      e.notes
     FROM workout w
     JOIN sets s ON w.workout_id = s.workout_id
     JOIN exercise e ON s.exercise_id = e.exercise_id
@@ -191,6 +191,11 @@ app.post("/api/logs", (req, res) => {
                   .json({ error: "Failed to create exercise" });
               }
 
+              db.run(
+                "UPDATE exercise SET notes = ? WHERE name = ?",
+                [notes || null, exercise],
+              );
+
               db.get(
                 "SELECT exercise_id FROM exercise WHERE name = ?",
                 [exercise],
@@ -206,8 +211,8 @@ app.post("/api/logs", (req, res) => {
 
                   normalizedSets.forEach((set, index) => {
                     db.run(
-                      "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps, notes) VALUES (?, ?, ?, ?, ?, ?)",
-                      [workoutId, exerciseId, index + 1, set.weight, set.reps, index === 0 ? notes || null : null],
+                      "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps) VALUES (?, ?, ?, ?, ?)",
+                      [workoutId, exerciseId, index + 1, set.weight, set.reps],
                       function (err) {
                         if (err) {
                           return res.status(500).json({ error: "Failed to create set" });
@@ -341,6 +346,11 @@ app.put("/api/exercises/:id", (req, res) => {
                 return res.status(500).json({ error: "Failed creating exercise" });
               }
 
+              db.run(
+                "UPDATE exercise SET notes = ? WHERE name = ?",
+                [notes || null, exercise],
+              );
+
               db.get(
                 "SELECT exercise_id FROM exercise WHERE name = ?",
                 [exercise],
@@ -363,8 +373,8 @@ app.put("/api/exercises/:id", (req, res) => {
 
                       sets.forEach((set, index) => {
                         db.run(
-                          "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps, notes) VALUES (?, ?, ?, ?, ?, ?)",
-                          [workout_id, exerciseId, index + 1, set.weight, set.reps, index === 0 ? notes || null : null],
+                          "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps) VALUES (?, ?, ?, ?, ?)",
+                          [workout_id, exerciseId, index + 1, set.weight, set.reps],
                           function (err) {
                             if (err) {
                               return res.status(500).json({ error: "Insert failed" });
