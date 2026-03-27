@@ -32,8 +32,14 @@ export default function SessionList(props) {
               <span className="session-arrow">
                 {expandedSessions.has(session.id) ? "▼" : "▶"}
               </span>
-
+              
+            <div className="session-title">
               <span className="session-date">{session.date}</span>
+
+              {session.name && (
+                <span className="session-name"> {session.name}</span>
+              )}
+              </div>
 
               {session.bodyweight_lbs != null && (
                 <span className="session-bw">

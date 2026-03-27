@@ -26,6 +26,7 @@ app.get("/api/logs", (req, res) => {
       w.workout_id,
       w.workout_date,
       w.bodyweight_lbs,
+      w.name,
       s.set_id,
       s.set_number,
       e.name AS exercise,
@@ -53,9 +54,14 @@ app.get("/api/logs", (req, res) => {
         sessions[workoutId] = {
           id: workoutId,
           date: row.workout_date,
+          name: row.name,
           bodyweight_lbs: row.bodyweight_lbs,
           exercises: {},
         };
+      }
+
+      if (row.name) {
+        sessions[workoutId].name = row.name;
       }
 
       if (!sessions[workoutId].exercises[row.exercise]) {
@@ -98,7 +104,7 @@ app.get("/api/logs", (req, res) => {
 });
 
 app.post("/api/logs", (req, res) => {
-  const { date, exercise, weight, reps, sets, bodyweight, notes } = req.body;
+  const { date, name, exercise, weight, reps, sets, bodyweight, notes } = req.body;
 
   let normalizedSets = [];
   if (Array.isArray(sets)) {
@@ -148,9 +154,9 @@ app.post("/api/logs", (req, res) => {
   }
 
   db.run(
-    `INSERT INTO workout (workout_date, bodyweight_lbs) VALUES (?, ?)
-      ON CONFLICT(workout_date) DO UPDATE SET bodyweight_lbs = excluded.bodyweight_lbs`,
-    [date, bodyweight],
+    `INSERT INTO workout (workout_date, bodyweight_lbs, name) VALUES (?, ?, ?)
+      ON CONFLICT(workout_date) DO UPDATE SET bodyweight_lbs = excluded.bodyweight_lbs, name = excluded.name`,
+    [date, bodyweight, name || null],
     (err) => {
       if (err) {
         return res.status(500).json({ error: "Failed to create workout" });
