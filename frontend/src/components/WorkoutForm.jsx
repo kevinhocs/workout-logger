@@ -3,42 +3,6 @@ import SetRow from "./setRows";
 import { validateForm } from "../utils/validation";
 import { createWorkout, updateExercise } from "../utils/api";
 
-export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
-  const {
-  form,
-  setForm,
-  sets,
-  setSets,
-  errors,
-  setErrors,
-  editingLog,
-  setEditingLog,
-  cancelEdit
-} = formState;
-
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  function addSet() {
-    setSets([...sets, { weight: "", reps: "" }]);
-  }
-
-  function removeSet(index) {
-    const updated = [...sets];
-    updated.splice(index, 1);
-    setSets(updated);
-  }
-
-  function updateSet(index, field, value) {
-    const updated = [...sets];
-    updated[index][field] = value;
-    setSets(updated);
-  }
-
   const buildSetsPayload = (sets, unit) => {
   return sets.map((s) => {
     const weightInput = Number(s.weight);
@@ -55,6 +19,42 @@ export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
   });
 };
 
+export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
+  const {
+  form,
+  setForm,
+  sets,
+  setSets,
+  errors,
+  setErrors,
+  editingLog,
+  setEditingLog,
+  cancelEdit
+} = formState;
+
+
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  function addSet() {
+    setSets([...sets, { weight: "", reps: "" }]);
+  }
+
+  function removeSet(index) {
+    setSets(sets.filter((_, i) => i !== index));
+  }
+
+  function updateSet(index, field, value) {
+  const updated = sets.map((s, i) =>
+    i === index ? { ...s, [field]: value } : s
+  );
+    setSets(updated);
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -63,26 +63,23 @@ export default function WorkoutForm({ formState, unit, setUnit, fetchLogs }) {
     if (Object.keys(validationErrors).length > 0) return;
 
     const setsPayload = buildSetsPayload(sets, unit);
-    console.log("SETS STATE:", sets);
-    console.log("SETS PAYLOAD:", setsPayload);
 
-    const updatePayload = {
+    const basePayload = {
       exercise: form.exercise,
       sets: setsPayload,
       bodyweight: Number(form.bodyweight),
       notes: form.notes || null,
     };
 
-    const createPayload = {
-      date: form.date,
-      ...updatePayload,
-    };
+    const payload = editingLog?.id
+    ? basePayload
+    : { date : form.date, ...basePayload };
 
     try {
       if (editingLog?.id) {
-        await updateExercise(editingLog.id, updatePayload);
+        await updateExercise(editingLog.id, payload);
       } else {
-        await createWorkout(createPayload);
+        await createWorkout(payload);
       }
 
       await fetchLogs();
