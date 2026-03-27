@@ -61,6 +61,12 @@ export default function SessionList(props) {
                     <div className="log-exercise-row">
                       <div className="log-exercise">{exercise.name}</div>
 
+                      {exercise.notes && (
+                        <div className="exercise-notes">
+                          {exercise.notes}
+                        </div>
+                      )}
+
                       <div className="exercise-actions">
                         <button
                           className="edit-btn"
