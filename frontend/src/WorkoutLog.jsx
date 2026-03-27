@@ -9,18 +9,7 @@ import useWorkoutActions from "./hooks/useWorkoutActions";
 
 export default function WorkoutLog() {
   const [unit, setUnit] = useState("lbs");
-  const { form, 
-    setForm, 
-    sets, 
-    setSets, 
-    editingLog, 
-    setEditingLog, 
-    resetForm, 
-    startEdit, 
-    errors, 
-    setErrors,
-    cancelEdit
-  } = useWorkoutForm({ unit, toKg, round1 });
+  const formState = useWorkoutForm({ unit, toKg, round1 });
   const { logs, fetchLogs } = useWorkoutLogs();
   const [visibleCount, setVisibleCount] = useState(10);
   const [expandedSessions, setExpandedSessions] = useState(new Set());
@@ -29,7 +18,7 @@ export default function WorkoutLog() {
     setUnit((prev) => (prev === "lbs" ? "kg" : "lbs"));
   };
 
-  const { handleDelete, handleDeleteWorkout } = useWorkoutActions({ editingLog, cancelEdit, fetchLogs });
+  const { handleDelete, handleDeleteWorkout } = useWorkoutActions({ editingLog: formState.editingLog, cancelEdit: formState.cancelEdit, fetchLogs });
 
   return (
     <div className="panel">
@@ -48,17 +37,7 @@ export default function WorkoutLog() {
       </div>
 
       <WorkoutForm
-        formState={{
-          form,
-          setForm,
-          sets,
-          setSets,
-          errors,
-          setErrors,
-          editingLog,
-          setEditingLog,
-          cancelEdit
-        }}
+        formState={formState}
         unit={unit}
         setUnit={setUnit}
         fetchLogs={fetchLogs}
@@ -76,7 +55,7 @@ export default function WorkoutLog() {
           unit={unit}
           handleDelete={handleDelete}
           handleDeleteWorkout={handleDeleteWorkout}
-          startEdit={startEdit}
+          startEdit={formState.startEdit}
           round1={round1}
           toKg={toKg}
         />

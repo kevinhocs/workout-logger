@@ -109,7 +109,7 @@ export default function WorkoutForm({ formState, unit, fetchLogs }) {
             />
           ))}
 
-          <button type="button" className="secondary" onClick={addSet}>
+        <button type="button" className="secondary" onClick={addSet}>
             + Add Set
           </button>
         </div>
