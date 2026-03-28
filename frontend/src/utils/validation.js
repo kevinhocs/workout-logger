@@ -14,6 +14,10 @@ export function validateForm(form, sets) {
     }
   }
 
+  if (!form.name || form.name.trim() === "") {
+    errors.name = "Workout name is required!";
+  }
+
   if (form.exercise.trim() === "") errors.exercise = "Exercise selection is required!";
 
   if (!sets.length) {

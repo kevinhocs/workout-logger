@@ -3,7 +3,7 @@ import SetRow from "./setRows";
 import { validateForm } from "../utils/validation";
 import { createWorkout, updateExercise } from "../utils/api";
 
-  const buildSetsPayload = (sets, unit) => {
+const buildSetsPayload = (sets, unit) => {
   return sets.map((s) => {
     const weightInput = Number(s.weight);
 
@@ -21,18 +21,17 @@ import { createWorkout, updateExercise } from "../utils/api";
 
 export default function WorkoutForm({ formState, unit, fetchLogs }) {
   const {
-  form,
-  sets,
-  errors,
-  setErrors,
-  editingLog,
-  cancelEdit,
-  addSet,
-  removeSet,
-  updateSet,
-  updateField,
-} = formState;
-
+    form,
+    sets,
+    errors,
+    setErrors,
+    editingLog,
+    cancelEdit,
+    addSet,
+    removeSet,
+    updateSet,
+    updateField,
+  } = formState;
 
   const handleChange = (e) => {
     updateField(e.target.name, e.target.value);
@@ -48,6 +47,7 @@ export default function WorkoutForm({ formState, unit, fetchLogs }) {
     const setsPayload = buildSetsPayload(sets, unit);
 
     const basePayload = {
+      name: form.name,
       exercise: form.exercise,
       sets: setsPayload,
       bodyweight: Number(form.bodyweight),
@@ -55,8 +55,8 @@ export default function WorkoutForm({ formState, unit, fetchLogs }) {
     };
 
     const payload = editingLog?.id
-    ? basePayload
-    : { date : form.date, ...basePayload };
+      ? basePayload
+      : { date: form.date, ...basePayload };
 
     try {
       if (editingLog?.id) {
@@ -90,6 +90,17 @@ export default function WorkoutForm({ formState, unit, fetchLogs }) {
         </div>
 
         <div className="field">
+          <label>Workout Name</label>
+          <input
+            name="name"
+            value={form.name}
+            placeholder="e.g., Upper, Lower, Push"
+            onChange={handleChange}
+          />
+          {errors.name && <span className="error">{errors.name}</span>}
+        </div>
+
+        <div className="field">
           <label>Exercise</label>
           <input name="exercise" value={form.exercise} placeholder="e.g., Bench Press" onChange={handleChange} />
           {errors.exercise && <span className="error" role="alert">{errors.exercise}</span>}
@@ -109,7 +120,7 @@ export default function WorkoutForm({ formState, unit, fetchLogs }) {
             />
           ))}
 
-        <button type="button" className="secondary" onClick={addSet}>
+          <button type="button" className="secondary" onClick={addSet}>
             + Add Set
           </button>
         </div>
@@ -121,7 +132,7 @@ export default function WorkoutForm({ formState, unit, fetchLogs }) {
         </div>
 
         <div className="field">
-          <label>Notes</label>
+          <label>Notes (Optional)</label>
           <input name="notes" value={form.notes} onChange={handleChange} />
         </div>
       </div>

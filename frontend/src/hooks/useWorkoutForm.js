@@ -3,6 +3,7 @@ import { useState } from "react";
 export default function useWorkoutForm({unit, toKg, round1}) {
   const [form, setForm] = useState({
     date: "",
+    name: "",
     exercise: "",
     notes: "",
     bodyweight: "",
@@ -14,6 +15,7 @@ export default function useWorkoutForm({unit, toKg, round1}) {
   const resetForm = () => {
     setForm({
       date: "",
+      name: "",
       exercise: "",
       notes: "",
       bodyweight: "",
@@ -36,6 +38,7 @@ export default function useWorkoutForm({unit, toKg, round1}) {
   
       setForm({
         date: session.date,
+        name: session.name || "",
         exercise: exercise.name,
         bodyweight: session.bodyweight_lbs ?? "",
         notes: "",
