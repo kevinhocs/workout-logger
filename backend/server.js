@@ -155,38 +155,23 @@ app.post("/api/logs", (req, res) => {
 
   db.run(
     `INSERT INTO workout (workout_date, bodyweight_lbs, name) VALUES (?, ?, ?)
-      ON CONFLICT(workout_date) DO UPDATE SET bodyweight_lbs = excluded.bodyweight_lbs, name = excluded.name`,
+    ON CONFLICT(workout_date, name) DO UPDATE SET bodyweight_lbs = excluded.bodyweight_lbs`,
     [date, bodyweight, name || null],
-    (err) => {
+    function (err) {
       if (err) {
         return res.status(500).json({ error: "Failed to create workout" });
       }
 
       db.get(
-        "SELECT workout_id FROM workout WHERE workout_date = ?",
-        [date],
-        (err, row) => {
-          if (err || !row) {
-            return res
-              .status(500)
-              .json({ error: "Failed to retrieve workout" });
+        "SELECT workout_id FROM workout WHERE workout_date = ? AND name IS ?",
+        [date, name || null],
+        (err, workoutRow) => {
+          if (err || !workoutRow) {
+            return res.status(500).json({ error: "Failed to retrieve workout" });
           }
 
-          if (typeof bodyweight === "number" && bodyweight > 0) {
-            db.run(
-              "UPDATE workout SET bodyweight_lbs = ? WHERE workout_id = ?",
-              [bodyweight, row.workout_id],
-              (err) => {
-                if (err) {
-                  return res
-                    .status(500)
-                    .json({ error: "Failed to update bodyweight" });
-                }
-              },
-            );
-          }
+      const workoutId = workoutRow.workout_id;
 
-          const workoutId = row.workout_id;
           db.run(
             "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
             [exercise],
@@ -241,11 +226,11 @@ app.post("/api/logs", (req, res) => {
               );
             },
           );
-        },
+        }
       );
-    },
+    }
   );
-});
+    });
 
 app.delete("/api/logs/:id", (req, res) => {
   const { id } = req.params;
