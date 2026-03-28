@@ -170,7 +170,7 @@ app.post("/api/logs", (req, res) => {
             return res.status(500).json({ error: "Failed to retrieve workout" });
           }
 
-      const workoutId = workoutRow.workout_id;
+          const workoutId = workoutRow.workout_id;
 
           db.run(
             "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
@@ -198,39 +198,53 @@ app.post("/api/logs", (req, res) => {
                   }
 
                   const exerciseId = row.exercise_id;
-                  let inserted = 0;
 
-                  normalizedSets.forEach((set, index) => {
-                    db.run(
-                      "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps) VALUES (?, ?, ?, ?, ?)",
-                      [workoutId, exerciseId, index + 1, set.weight, set.reps],
-                      function (err) {
-                        if (err) {
-                          return res.status(500).json({ error: "Failed to create set" });
-                        }
+                  db.get(
+                    `SELECT MAX(set_number) AS maxSet
+                     FROM sets
+                     WHERE workout_id = ? AND exercise_id = ?`,
+                    [workoutId, exerciseId],
+                    (err, maxRow) => {
+                      if (err) {
+                        return res.status(500).json({ error: "Failed to get max set number" });
+                      }
 
-                        inserted++;
+                      const start = maxRow.maxSet || 0;
+                      let inserted = 0;
 
-                        if (inserted === normalizedSets.length) {
-                          res.status(201).json({
-                            date,
-                            exercise,
-                            sets: normalizedSets.length,
-                            bodyweight_lbs: bodyweight,
-                          });
-                        }
-                      },
-                    );
-                  });
+                      normalizedSets.forEach((set, index) => {
+                        db.run(
+                          "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps) VALUES (?, ?, ?, ?, ?)",
+                          [workoutId, exerciseId, start + index + 1, set.weight, set.reps],
+                          function (err) {
+                            if (err) {
+                              return res.status(500).json({ error: "Failed to create set" });
+                            }
+
+                            inserted++;
+
+                            if (inserted === normalizedSets.length) {
+                              res.status(201).json({
+                                date,
+                                exercise,
+                                sets: normalizedSets.length,
+                                bodyweight_lbs: bodyweight,
+                              });
+                            }
+                          },
+                        );
+                      });
+                    },
+                  );
                 },
               );
             },
           );
-        }
+        },
       );
-    }
+    },
   );
-    });
+});
 
 app.delete("/api/logs/:id", (req, res) => {
   const { id } = req.params;
