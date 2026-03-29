@@ -246,6 +246,43 @@ app.post("/api/logs", (req, res) => {
   );
 });
 
+app.post("/workouts", (req, res) => {
+  const { date, name, bodyweight } = req.body;
+
+  const parsedDate = new Date(date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (!date || typeof date !== "string" || isNaN(parsedDate.getTime()) || parsedDate > today) {
+    return res.status(400).json({ error: "Invalid date" });
+  }
+
+  if (!name || name.trim() === "") {
+    return res.status(400).json({ error: "Workout name is required" });
+  }
+
+  const bw = Number(bodyweight);
+  if (!Number.isFinite(bw) || bw <= 0) {
+    return res.status(400).json({ error: "Valid bodyweight is required" });
+  }
+
+  const sql = `
+    INSERT INTO workout (workout_date, name, bodyweight_lbs)
+    VALUES (?, ?, ?)
+  `;
+
+  db.run(sql, [date, name.trim(), bw], function (err) {
+    if (err) {
+      console.error("Error inserting workout:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    return res.status(201).json({
+      workout_id: this.lastID,
+    });
+  });
+});
+
 app.delete("/api/logs/:id", (req, res) => {
   const { id } = req.params;
 
@@ -301,7 +338,7 @@ app.delete("/api/workouts/:id", (req, res) => {
       }
 
       res.status(204).send();
-    }
+    },
   );
 });
 
