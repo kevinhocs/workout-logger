@@ -27,15 +27,16 @@ app.get("/api/logs", (req, res) => {
       w.workout_date,
       w.bodyweight_lbs,
       w.name,
+      w.completed,
       s.set_id,
       s.set_number,
       e.name AS exercise,
       s.weight_lbs,
       s.reps,
-      e.notes
+      s.notes
     FROM workout w
-    JOIN sets s ON w.workout_id = s.workout_id
-    JOIN exercise e ON s.exercise_id = e.exercise_id
+    LEFT JOIN sets s ON w.workout_id = s.workout_id
+    LEFT JOIN exercise e ON s.exercise_id = e.exercise_id
     ORDER BY w.workout_date DESC, e.name ASC, s.set_number ASC
   `;
 
@@ -56,6 +57,7 @@ app.get("/api/logs", (req, res) => {
           date: row.workout_date,
           name: row.name,
           bodyweight_lbs: row.bodyweight_lbs,
+          completed: row.completed,
           exercises: {},
         };
       }
@@ -64,23 +66,27 @@ app.get("/api/logs", (req, res) => {
         sessions[workoutId].name = row.name;
       }
 
-      if (!sessions[workoutId].exercises[row.exercise]) {
-        sessions[workoutId].exercises[row.exercise] = {
-          name: row.exercise,
-          notes: null,
-          sets: [],
-        };
-      }
+      if (row.exercise) {
+        if (!sessions[workoutId].exercises[row.exercise]) {
+          sessions[workoutId].exercises[row.exercise] = {
+            name: row.exercise,
+            notes: null,
+            sets: [],
+          };
+        }
 
-      if (row.notes) {
-        sessions[workoutId].exercises[row.exercise].notes = row.notes;
-      }
+        if (!sessions[workoutId].exercises[row.exercise].notes && row.notes) {
+          sessions[workoutId].exercises[row.exercise].notes = row.notes;
+        }
 
-      sessions[workoutId].exercises[row.exercise].sets.push({
-        id: row.set_id,
-        weight: row.weight_lbs,
-        reps: row.reps,
-      });
+        if (row.set_id) {
+          sessions[workoutId].exercises[row.exercise].sets.push({
+            id: row.set_id,
+            weight: row.weight_lbs,
+            reps: row.reps,
+          });
+        }
+      }
     }
 
     for (const session of Object.values(sessions)) {
@@ -103,43 +109,50 @@ app.get("/api/logs", (req, res) => {
   });
 });
 
-app.post("/api/logs", (req, res) => {
-  const { date, name, exercise, weight, reps, sets, bodyweight, notes } = req.body;
+app.post("/api/workouts", (req, res) => {
+  const { date, name, bodyweight } = req.body;
 
-  let normalizedSets = [];
-  if (Array.isArray(sets)) {
-    normalizedSets = sets;
-  } else if (
-    Number.isInteger(sets) &&
-    sets > 0 &&
-    typeof weight === "number" &&
-    typeof reps === "number"
-  ) {
-    normalizedSets = Array.from({ length: sets }, () => ({ weight, reps }));
-  }
-
-  if (
-    !date ||
-    !exercise ||
-    normalizedSets.length === 0 ||
-    bodyweight == null
-  ) {
+  if (!date || !name || name.trim() === "" || bodyweight == null) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
   const d = new Date(date);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (isNaN(d.getTime()) || d > today) {
+  if (isNaN(d.getTime())) {
     return res.status(400).json({ error: "Invalid date" });
   }
 
-  if (
-    typeof bodyweight !== "number" ||
-    bodyweight <= 0
-  ) {
-    return res.status(400).json({ error: "Invalid numeric values" });
+  if (typeof bodyweight !== "number" || bodyweight <= 0) {
+    return res.status(400).json({ error: "Invalid bodyweight" });
+  }
+
+  db.serialize(() => {
+    db.run("UPDATE workout SET completed = 1 WHERE completed = 0");
+
+    db.run(
+      `INSERT INTO workout (workout_date, bodyweight_lbs, name, completed)
+       VALUES (?, ?, ?, 0)`,
+      [date, bodyweight, name],
+      function (err) {
+        if (err) {
+          console.error("CREATE WORKOUT ERROR:", err);
+          return res.status(500).json({ error: err.message });
+        }
+
+        res.status(201).json({
+          workout_id: this.lastID,
+        });
+      },
+    );
+  });
+});
+
+app.post("/api/logs", (req, res) => {
+  const { workout_id, exercise, sets, notes } = req.body;
+
+  const normalizedSets = Array.isArray(sets) ? sets : [];
+
+  if (!workout_id || !exercise || normalizedSets.length === 0) {
+    return res.status(400).json({ error: "Missing required fields" });
   }
 
   for (const s of normalizedSets) {
@@ -154,133 +167,82 @@ app.post("/api/logs", (req, res) => {
   }
 
   db.run(
-    `INSERT INTO workout (workout_date, bodyweight_lbs, name) VALUES (?, ?, ?)
-    ON CONFLICT(workout_date, name) DO UPDATE SET bodyweight_lbs = excluded.bodyweight_lbs`,
-    [date, bodyweight, name || null],
-    function (err) {
+    "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
+    [exercise],
+    (err) => {
       if (err) {
-        return res.status(500).json({ error: "Failed to create workout" });
+        return res.status(500).json({ error: "Failed to create exercise" });
       }
 
       db.get(
-        "SELECT workout_id FROM workout WHERE workout_date = ? AND name IS ?",
-        [date, name || null],
-        (err, workoutRow) => {
-          if (err || !workoutRow) {
-            return res.status(500).json({ error: "Failed to retrieve workout" });
+        "SELECT exercise_id FROM exercise WHERE name = ?",
+        [exercise],
+        (err, row) => {
+          if (err || !row) {
+            return res
+              .status(500)
+              .json({ error: "Failed to retrieve exercise" });
           }
 
-          const workoutId = workoutRow.workout_id;
+          const exerciseId = row.exercise_id;
 
-          db.run(
-            "INSERT OR IGNORE INTO exercise (name) VALUES (?)",
-            [exercise],
-            (err) => {
+          db.get(
+            `SELECT MAX(set_number) AS maxSet
+             FROM sets
+             WHERE workout_id = ? AND exercise_id = ?`,
+            [workout_id, exerciseId],
+            (err, maxRow) => {
               if (err) {
                 return res
                   .status(500)
-                  .json({ error: "Failed to create exercise" });
+                  .json({ error: "Failed to get max set number" });
               }
 
-              db.run(
-                "UPDATE exercise SET notes = ? WHERE name = ?",
-                [notes || null, exercise],
-              );
+              const start = maxRow && maxRow.maxSet ? maxRow.maxSet : 0;
+              let index = 0;
 
-              db.get(
-                "SELECT exercise_id FROM exercise WHERE name = ?",
-                [exercise],
-                (err, row) => {
-                  if (err || !row) {
-                    return res
-                      .status(500)
-                      .json({ error: "Failed to retrieve exercise" });
-                  }
+              function insertNext() {
+                if (index >= normalizedSets.length) {
+                  return res.status(201).json({
+                    workout_id,
+                    exercise,
+                    sets: normalizedSets.length,
+                  });
+                }
 
-                  const exerciseId = row.exercise_id;
+                const set = normalizedSets[index];
 
-                  db.get(
-                    `SELECT MAX(set_number) AS maxSet
-                     FROM sets
-                     WHERE workout_id = ? AND exercise_id = ?`,
-                    [workoutId, exerciseId],
-                    (err, maxRow) => {
-                      if (err) {
-                        return res.status(500).json({ error: "Failed to get max set number" });
-                      }
+                db.run(
+                  `INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps, notes)
+                   VALUES (?, ?, ?, ?, ?, ?)`,
+                  [
+                    workout_id,
+                    exerciseId,
+                    start + index + 1,
+                    set.weight,
+                    set.reps,
+                    index === 0 ? notes || null : null,
+                  ],
+                  function (err) {
+                    if (err) {
+                      return res
+                        .status(500)
+                        .json({ error: "Failed to create set" });
+                    }
 
-                      const start = maxRow.maxSet || 0;
-                      let inserted = 0;
+                    index++;
+                    insertNext();
+                  },
+                );
+              }
 
-                      normalizedSets.forEach((set, index) => {
-                        db.run(
-                          "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps) VALUES (?, ?, ?, ?, ?)",
-                          [workoutId, exerciseId, start + index + 1, set.weight, set.reps],
-                          function (err) {
-                            if (err) {
-                              return res.status(500).json({ error: "Failed to create set" });
-                            }
-
-                            inserted++;
-
-                            if (inserted === normalizedSets.length) {
-                              res.status(201).json({
-                                date,
-                                exercise,
-                                sets: normalizedSets.length,
-                                bodyweight_lbs: bodyweight,
-                              });
-                            }
-                          },
-                        );
-                      });
-                    },
-                  );
-                },
-              );
+              insertNext();
             },
           );
         },
       );
     },
   );
-});
-
-app.post("/workouts", (req, res) => {
-  const { date, name, bodyweight } = req.body;
-
-  const parsedDate = new Date(date);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (!date || typeof date !== "string" || isNaN(parsedDate.getTime()) || parsedDate > today) {
-    return res.status(400).json({ error: "Invalid date" });
-  }
-
-  if (!name || name.trim() === "") {
-    return res.status(400).json({ error: "Workout name is required" });
-  }
-
-  const bw = Number(bodyweight);
-  if (!Number.isFinite(bw) || bw <= 0) {
-    return res.status(400).json({ error: "Valid bodyweight is required" });
-  }
-
-  const sql = `
-    INSERT INTO workout (workout_date, name, bodyweight_lbs)
-    VALUES (?, ?, ?)
-  `;
-
-  db.run(sql, [date, name.trim(), bw], function (err) {
-    if (err) {
-      console.error("Error inserting workout:", err);
-      return res.status(500).json({ error: "Database error" });
-    }
-
-    return res.status(201).json({
-      workout_id: this.lastID,
-    });
-  });
 });
 
 app.delete("/api/logs/:id", (req, res) => {
@@ -301,7 +263,9 @@ app.delete("/api/logs/:id", (req, res) => {
         [workout_id, exercise_id],
         function (err) {
           if (err) {
-            return res.status(500).json({ error: "Failed to delete exercise sets" });
+            return res
+              .status(500)
+              .json({ error: "Failed to delete exercise sets" });
           }
 
           db.get(
@@ -309,11 +273,9 @@ app.delete("/api/logs/:id", (req, res) => {
             [workout_id],
             (err, result) => {
               if (err) {
-                return res.status(500).json({ error: "Failed to check workout" });
-              }
-
-              if (result.count === 0) {
-                db.run("DELETE FROM workout WHERE workout_id = ?", [workout_id]);
+                return res
+                  .status(500)
+                  .json({ error: "Failed to check workout" });
               }
 
               res.status(204).send();
@@ -328,26 +290,54 @@ app.delete("/api/logs/:id", (req, res) => {
 app.delete("/api/workouts/:id", (req, res) => {
   const { id } = req.params;
 
-  db.run(
-    "DELETE FROM workout WHERE workout_id = ?",
-    [id],
-    function (err) {
+  db.run("DELETE FROM sets WHERE workout_id = ?", [id], function (err) {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Failed to delete sets" });
+    }
+
+    db.run("DELETE FROM workout WHERE workout_id = ?", [id], function (err) {
       if (err) {
         console.error(err);
         return res.status(500).json({ error: "Failed to delete workout" });
       }
 
       res.status(204).send();
+    });
+  });
+});
+
+app.patch("/api/workouts/:id/complete", (req, res) => {
+  const { id } = req.params;
+
+  db.run(
+    "UPDATE workout SET completed = 1 WHERE workout_id = ?",
+    [id],
+    function (err) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Failed to complete workout" });
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({ error: "Workout not found" });
+      }
+
+      res.json({ success: true });
     },
   );
 });
 
-// Update a log by id
 app.put("/api/exercises/:id", (req, res) => {
   const { id } = req.params;
   const { exercise, sets, bodyweight, notes } = req.body;
 
-  if (!exercise || !Array.isArray(sets) || sets.length === 0 || bodyweight == null) {
+  if (
+    !exercise ||
+    !Array.isArray(sets) ||
+    sets.length === 0 ||
+    bodyweight == null
+  ) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -377,7 +367,9 @@ app.put("/api/exercises/:id", (req, res) => {
         [bodyweight, workout_id],
         (err) => {
           if (err) {
-            return res.status(500).json({ error: "Failed to update bodyweight" });
+            return res
+              .status(500)
+              .json({ error: "Failed to update bodyweight" });
           }
 
           db.run(
@@ -385,20 +377,19 @@ app.put("/api/exercises/:id", (req, res) => {
             [exercise],
             (err) => {
               if (err) {
-                return res.status(500).json({ error: "Failed creating exercise" });
+                return res
+                  .status(500)
+                  .json({ error: "Failed creating exercise" });
               }
-
-              db.run(
-                "UPDATE exercise SET notes = ? WHERE name = ?",
-                [notes || null, exercise],
-              );
 
               db.get(
                 "SELECT exercise_id FROM exercise WHERE name = ?",
                 [exercise],
                 (err, exerciseRow) => {
                   if (err || !exerciseRow) {
-                    return res.status(500).json({ error: "Exercise lookup failed" });
+                    return res
+                      .status(500)
+                      .json({ error: "Exercise lookup failed" });
                   }
 
                   const exerciseId = exerciseRow.exercise_id;
@@ -408,28 +399,44 @@ app.put("/api/exercises/:id", (req, res) => {
                     [workout_id, exerciseId],
                     (err) => {
                       if (err) {
-                        return res.status(500).json({ error: "Failed clearing sets" });
+                        return res
+                          .status(500)
+                          .json({ error: "Failed clearing sets" });
                       }
 
-                      let inserted = 0;
+                      let index = 0;
 
-                      sets.forEach((set, index) => {
+                      function insertNext() {
+                        if (index >= sets.length) {
+                          return res.json({ success: true });
+                        }
+
+                        const set = sets[index];
+
                         db.run(
-                          "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps) VALUES (?, ?, ?, ?, ?)",
-                          [workout_id, exerciseId, index + 1, set.weight, set.reps],
+                          "INSERT INTO sets (workout_id, exercise_id, set_number, weight_lbs, reps, notes) VALUES (?, ?, ?, ?, ?, ?)",
+                          [
+                            workout_id,
+                            exerciseId,
+                            index + 1,
+                            set.weight,
+                            set.reps,
+                            set.notes || null,
+                          ],
                           function (err) {
                             if (err) {
-                              return res.status(500).json({ error: "Insert failed" });
+                              return res
+                                .status(500)
+                                .json({ error: "Insert failed" });
                             }
 
-                            inserted++;
-
-                            if (inserted === sets.length) {
-                              res.json({ success: true });
-                            }
+                            index++;
+                            insertNext();
                           },
                         );
-                      });
+                      }
+
+                      insertNext();
                     },
                   );
                 },

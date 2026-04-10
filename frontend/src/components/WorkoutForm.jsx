@@ -1,152 +1,260 @@
-import { toLbs, round1 } from "../utils/units";
-import SetRow from "./setRows";
-import { validateForm } from "../utils/validation";
-import { createWorkout, updateExercise } from "../utils/api";
+import { useState } from "react";
+import ConfirmModal from "./ConfirmModal";
 
-const buildSetsPayload = (sets, unit) => {
-  return sets.map((s) => {
-    const weightInput = Number(s.weight);
+export default function WorkoutForm({
+  formState,
+  unit,
+  fetchLogs,
+  currentWorkout,
+  targetWorkoutId,
+  templateExercises,
+}) {
+  const { form, errors, setErrors, editingLog, cancelEdit, updateField } =
+    formState;
 
-    const weightInLbs =
-      unit === "kg"
-        ? round1(toLbs(weightInput))
-        : weightInput;
-
-    return {
-      weight: weightInLbs,
-      reps: Number(s.reps),
-    };
-  });
-};
-
-export default function WorkoutForm({ formState, unit, fetchLogs }) {
-  const {
-    form,
-    sets,
-    errors,
-    setErrors,
-    editingLog,
-    cancelEdit,
-    addSet,
-    removeSet,
-    updateSet,
-    updateField,
-  } = formState;
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const handleChange = (e) => {
     updateField(e.target.name, e.target.value);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const validationErrors = validateForm(form, sets);
-    setErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
-
-    const setsPayload = buildSetsPayload(sets, unit);
-
-    const basePayload = {
-      name: form.name,
-      exercise: form.exercise,
-      sets: setsPayload,
-      bodyweight: Number(form.bodyweight),
-      notes: form.notes || null,
-    };
-
-    const payload = editingLog?.id
-      ? basePayload
-      : { date: form.date, ...basePayload };
-
-    try {
-      if (editingLog?.id) {
-        await updateExercise(editingLog.id, payload);
-      } else {
-        await createWorkout(payload);
-      }
-
-      await fetchLogs();
-      cancelEdit();
-    } catch (err) {
-      console.error("Error submitting log:", err);
-      alert("Failed to save workout. Server may be unavailable.");
-    }
-  };
-
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="form-stack">
-        <div className="field">
-          <label>Date</label>
-          <input
-            type="date"
-            name="date"
-            value={form.date}
-            max={new Date().toISOString().split("T")[0]}
-            onChange={handleChange}
-            disabled={!!editingLog}
-          />
-          {errors.date && <span className="error" role="alert">{errors.date}</span>}
+    <>
+      {message && <div className="success-message">{message}</div>}
+      {!editingLog && currentWorkout && (
+        <div
+          style={{
+            marginBottom: "12px",
+            padding: "10px",
+            background: "#1e3a8a",
+            borderRadius: "8px",
+            color: "white",
+            fontSize: "14px",
+          }}
+        >
+          Active Workout: <strong>{currentWorkout.name}</strong> (
+          {currentWorkout.date})
         </div>
+      )}
+      {!editingLog && !targetWorkoutId && (
+        <button
+          type="button"
+          className="primary"
+          disabled={
+            loading ||
+            !!currentWorkout ||
+            !!editingLog ||
+            !!targetWorkoutId ||
+            !form.date ||
+            !form.name ||
+            !form.bodyweight
+          }
+          style={{
+            marginBottom: "16px",
+            width: "100%",
+            opacity: currentWorkout ? 0.5 : 1,
+            cursor: currentWorkout ? "not-allowed" : "pointer",
+          }}
+          onClick={async () => {
+            if (loading) return;
+            setLoading(true);
+            if (!form.date || !form.name || !form.bodyweight) {
+              setErrors({
+                date: !form.date ? "Required" : "",
+                name: !form.name ? "Required" : "",
+                bodyweight: !form.bodyweight ? "Required" : "",
+              });
+              setLoading(false);
+              return;
+            }
 
-        <div className="field">
-          <label>Workout Name</label>
-          <input
-            name="name"
-            value={form.name}
-            placeholder="e.g., Upper, Lower, Push"
-            onChange={handleChange}
-          />
-          {errors.name && <span className="error">{errors.name}</span>}
-        </div>
+            try {
+              const res = await fetch("/api/workouts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  date: form.date,
+                  name: form.name,
+                  bodyweight:
+                    unit === "kg"
+                      ? Number(form.bodyweight) * 2.20462
+                      : Number(form.bodyweight),
+                }),
+              });
 
-        <div className="field">
-          <label>Exercise</label>
-          <input name="exercise" value={form.exercise} placeholder="e.g., Bench Press" onChange={handleChange} />
-          {errors.exercise && <span className="error" role="alert">{errors.exercise}</span>}
-        </div>
+              const data = await res.json();
 
-        <div className="field">
-          <label>Sets</label>
+              console.log("TEMPLATE EXERCISES:", templateExercises);
 
-          {sets.map((set, index) => (
-            <SetRow
-              key={index}
-              set={set}
-              index={index}
-              unit={unit}
-              updateSet={updateSet}
-              removeSet={removeSet}
-            />
-          ))}
+              if (templateExercises?.length) {
+                for (const ex of templateExercises) {
+                  await fetch("/api/logs", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      workout_id: data.id,
+                      exercise: ex.name,
+                      notes: ex.notes || null,
+                      sets: ex.sets.map((s) => ({
+                        weight: s.weight,
+                        reps: s.reps,
+                      })),
+                    }),
+                  });
+                }
+              }
 
-          <button type="button" className="secondary" onClick={addSet}>
-            + Add Set
-          </button>
-        </div>
+              if (!res.ok) {
+                console.error("Backend error:", data);
+                throw new Error(data.error || "Failed to create workout");
+              }
 
-        <div className="field">
-          <label>Bodyweight ({unit})</label>
-          <input type="number" name="bodyweight" value={form.bodyweight} onChange={handleChange} min="0" step="any" />
-          {errors.bodyweight && <span className="error" role="alert">{errors.bodyweight}</span>}
-        </div>
+              await fetchLogs();
 
-        <div className="field">
-          <label>Notes (Optional)</label>
-          <input name="notes" value={form.notes} onChange={handleChange} />
-        </div>
-      </div>
-
-      <div className="panel-footer">
-        {editingLog && (
-          <button type="button" className="secondary" onClick={cancelEdit}>
-            Cancel
-          </button>
-        )}
-        <button type="submit" className="primary">
-          {editingLog ? "Update Workout" : "Log Workout"}
+              setMessage("Workout started");
+              setTimeout(() => setMessage(""), 2000);
+              setLoading(false);
+            } catch (err) {
+              console.error("CREATE WORKOUT ERROR:", err);
+              setMessage(err.message);
+              setTimeout(() => setMessage(""), 2000);
+              setLoading(false);
+            }
+          }}
+        >
+          Start Workout
         </button>
+      )}
+      {!editingLog && currentWorkout && (
+        <button
+          type="button"
+          className="secondary"
+          style={{ marginBottom: "16px", width: "100%" }}
+          onClick={async () => {
+            if (loading) return;
+            setLoading(true);
+            await fetch(`/api/workouts/${currentWorkout.id}/complete`, {
+              method: "PATCH",
+            });
+            setLoading(false);
+
+            localStorage.removeItem("currentWorkout");
+
+            cancelEdit();
+
+            await fetchLogs();
+
+            setMessage("Workout ended");
+            setTimeout(() => setMessage(""), 2000);
+          }}
+        >
+          End Workout
+        </button>
+      )}
+
+      {!editingLog && currentWorkout && (
+        <button
+          type="button"
+          className="danger"
+          style={{ marginBottom: "16px", width: "100%" }}
+          disabled={loading}
+          onClick={() => setShowCancelModal(true)}
+        >
+          Cancel Workout
+        </button>
+      )}
+
+      <div>
+        {!currentWorkout && !editingLog && !targetWorkoutId && (
+          <div className="form-stack">
+            <div className="field">
+              <label>Date</label>
+              <input
+                type="date"
+                name="date"
+                value={form.date}
+                max={new Date().toISOString().split("T")[0]}
+                onChange={handleChange}
+                disabled={!!editingLog}
+              />
+              {errors.date && (
+                <span className="error" role="alert">
+                  {errors.date}
+                </span>
+              )}
+            </div>
+
+            <div className="field">
+              <label>Workout Name</label>
+              <input
+                name="name"
+                value={form.name}
+                placeholder="e.g., Upper, Lower, Push"
+                onChange={handleChange}
+              />
+              {errors.name && <span className="error">{errors.name}</span>}
+            </div>
+
+            <div className="field">
+              <label>Bodyweight ({unit})</label>
+              <input
+                type="number"
+                name="bodyweight"
+                value={form.bodyweight}
+                onChange={handleChange}
+                min="0"
+                step="any"
+              />
+              {errors.bodyweight && (
+                <span className="error" role="alert">
+                  {errors.bodyweight}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="panel-footer">
+          {editingLog && (
+            <button type="button" className="secondary" onClick={cancelEdit}>
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
-    </form>
+      <ConfirmModal
+        open={showCancelModal}
+        title="Cancel Workout"
+        message="All exercises will be lost. This cannot be undone."
+        onCancel={() => setShowCancelModal(false)}
+        onConfirm={async () => {
+          setShowCancelModal(false);
+          setLoading(true);
+
+          try {
+            await fetch(`/api/workouts/${currentWorkout.id}`, {
+              method: "DELETE",
+            });
+
+            localStorage.removeItem("currentWorkout");
+
+            await fetchLogs();
+
+            setMessage("Workout cancelled");
+            setTimeout(() => setMessage(""), 2000);
+          } catch (err) {
+            console.error("Cancel workout error:", err);
+            setMessage("Failed to cancel workout");
+            setTimeout(() => setMessage(""), 2000);
+          }
+
+          setLoading(false);
+        }}
+      />
+    </>
   );
 }

@@ -1,3 +1,6 @@
+import { useState } from "react";
+import ConfirmModal from "./ConfirmModal";
+
 export default function SessionList(props) {
   const {
     logs,
@@ -10,8 +13,15 @@ export default function SessionList(props) {
     handleDeleteWorkout,
     startEdit,
     round1,
-    toKg
+    toKg,
+    canEditPastWorkouts,
+    setTargetWorkoutId,
+    targetWorkoutId,
+    cancelEdit,
+    preloadWorkout,
   } = props;
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
     <>
@@ -32,18 +42,19 @@ export default function SessionList(props) {
               <span className="session-arrow">
                 {expandedSessions.has(session.id) ? "▼" : "▶"}
               </span>
-              
-            <div className="session-title">
-              <span className="session-date">{session.date}</span>
 
-              {session.name && (
-                <span className="session-name"> {session.name}</span>
-              )}
+              <div className="session-title">
+                <span className="session-date">{session.date}</span>
+
+                {session.name && (
+                  <span className="session-name"> {session.name}</span>
+                )}
               </div>
 
               {session.bodyweight_lbs != null && (
                 <span className="session-bw">
-                  • Bodyweight: {unit === "kg"
+                  • Bodyweight:{" "}
+                  {unit === "kg"
                     ? `${round1(toKg(session.bodyweight_lbs))} kg`
                     : `${session.bodyweight_lbs} lbs`}
                 </span>
@@ -53,12 +64,38 @@ export default function SessionList(props) {
                 className="delete-session"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDeleteWorkout(session.id);
+                  setTargetWorkoutId(session.id);
+                  setShowDeleteModal(true);
                 }}
               >
                 🗑
               </button>
             </div>
+
+            {canEditPastWorkouts && expandedSessions.has(session.id) && (
+              <button
+                className="add-exercise-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTargetWorkoutId(session.id);
+                }}
+              >
+                + Add Exercise
+              </button>
+            )}
+
+            {expandedSessions.has(session.id) && (
+              <button
+                className="secondary"
+                onClick={(e) => {
+                  console.log("CLICKED SESSION:", session);
+                  e.stopPropagation();
+                  preloadWorkout(session);
+                }}
+              >
+                Use as Template
+              </button>
+            )}
 
             {expandedSessions.has(session.id) &&
               (session.exercises || []).map((exercise) => (
@@ -68,9 +105,7 @@ export default function SessionList(props) {
                       <div className="log-exercise">{exercise.name}</div>
 
                       {exercise.notes && (
-                        <div className="exercise-notes">
-                          {exercise.notes}
-                        </div>
+                        <div className="exercise-notes">{exercise.notes}</div>
                       )}
 
                       <div className="exercise-actions">
@@ -129,6 +164,27 @@ export default function SessionList(props) {
           </button>
         </div>
       )}
+      <ConfirmModal
+        open={showDeleteModal}
+        title="Delete Workout"
+        message="This will permanently delete the workout."
+        onCancel={() => setShowDeleteModal(false)}
+        onConfirm={async () => {
+          setShowDeleteModal(false);
+
+          try {
+            console.log("Deleting workout:", targetWorkoutId);
+
+            await handleDeleteWorkout(targetWorkoutId);
+
+            cancelEdit();
+            setTargetWorkoutId(null);
+          } catch (err) {
+            console.error(err);
+            alert("Failed to delete workout.");
+          }
+        }}
+      />
     </>
   );
 }

@@ -5,7 +5,7 @@ export async function getLogs() {
 }
 
 export async function createWorkout(payload) {
-  const res = await fetch("/api/logs", {
+  const res = await fetch("/api/workouts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

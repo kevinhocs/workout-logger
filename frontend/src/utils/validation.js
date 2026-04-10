@@ -18,7 +18,8 @@ export function validateForm(form, sets) {
     errors.name = "Workout name is required!";
   }
 
-  if (form.exercise.trim() === "") errors.exercise = "Exercise selection is required!";
+  if (form.exercise.trim() === "")
+    errors.exercise = "Exercise selection is required!";
 
   if (!sets.length) {
     errors.sets = "At least one set is required.";
@@ -26,7 +27,8 @@ export function validateForm(form, sets) {
     if (!errors.weight) errors.weight = "Each set must have a weight.";
   }
 
-  if (form.bodyweight === "") errors.bodyweight = "Bodyweight value is required!";
+  if (form.bodyweight === "")
+    errors.bodyweight = "Bodyweight value is required!";
 
   if (sets.length && sets.some((s) => s.reps === "")) {
     if (!errors.reps) errors.reps = "Each set must have reps.";
@@ -36,7 +38,8 @@ export function validateForm(form, sets) {
     for (const s of sets) {
       const weight = Number(s.weight);
       if (!Number.isFinite(weight) || weight < 0) {
-        if (!errors.weight) errors.weight = "Set weights must be positive numbers.";
+        if (!errors.weight)
+          errors.weight = "Set weights must be positive numbers.";
       }
       const reps = Number(s.reps);
       if (!Number.isInteger(reps) || reps <= 0) {
@@ -48,7 +51,8 @@ export function validateForm(form, sets) {
   if (form.bodyweight !== "") {
     const bw = Number(form.bodyweight);
     if (!Number.isFinite(bw)) {
-      errors.bodyweight = "Bodyweight must be a positive number (decimals allowed)";
+      errors.bodyweight =
+        "Bodyweight must be a positive number (decimals allowed)";
     } else if (bw <= 0) {
       errors.bodyweight = "Bodyweight must be greater than 0.";
     }

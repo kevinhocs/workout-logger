@@ -1,14 +1,17 @@
 import { deleteLog, deleteWorkout } from "../utils/api";
 
-export default function useWorkoutActions({ editingLog, cancelEdit, fetchLogs }) {
-const handleDelete = async (id) => {
+export default function useWorkoutActions({
+  editingLog,
+  cancelEdit,
+  fetchLogs,
+}) {
+  const handleDelete = async (id) => {
     try {
-      await deleteLog(id);
-
-      if (editingLog && editingLog.id === id) {
+      if (editingLog && editingLog.set_id === id) {
         cancelEdit();
       }
 
+      await deleteLog(id);
       await fetchLogs();
     } catch (err) {
       console.error("Error deleting log:", err);
@@ -17,19 +20,17 @@ const handleDelete = async (id) => {
   };
 
   const handleDeleteWorkout = async (workoutId) => {
-    if (!window.confirm("Delete this entire workout?")) return;
-
     try {
       await deleteWorkout(workoutId);
       await fetchLogs();
     } catch (err) {
       console.error("Error deleting workout:", err);
-      alert("Failed to delete workout.");
+      throw err;
     }
   };
 
-    return {
+  return {
     handleDelete,
-    handleDeleteWorkout
+    handleDeleteWorkout,
   };
 }

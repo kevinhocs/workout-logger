@@ -15,6 +15,6 @@ export default function useWorkoutLogs() {
 
   return {
     logs,
-    fetchLogs
+    fetchLogs,
   };
 }
