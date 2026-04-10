@@ -47,7 +47,7 @@ The goal of the MVP is to provide a minimal and reliable system for recording wo
 
 - Frontend: React single-page application
 - Backend: Node.js with Express
-- API: RESTful JSON-based API
+- API: RESTful JSON API (single-user, no authentication)
 - Storage: SQLite-based relational database
 
 ## Data Model (Planned)
@@ -188,8 +188,9 @@ Behavior:
 - Deployed to AWS EC2
 - Nginx reverse proxy
 - HTTPS with Let's Encrypt
-- Live production database
+- Live SQLite database persisted on EC2 instance
 - Remote access via domain
+- Manual deployment workflow (git pull, frontend rebuild, Nginx update, PM2 restart)
 
 ### Phase 3 - Analytics & Modeling Layer (In Progress)
 #### Completed
@@ -215,3 +216,4 @@ Behavior:
 - Stable training structure
 - No major injury regime changes
 - Similar recovery conditions across sessions
+- Single-user local data persistence (no synchronization across devices)

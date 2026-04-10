@@ -2,7 +2,7 @@
 
 
 
-A production-deployed full-stack workout logging application focused on correctness, data integrity, and realistic domain constraints rather than UI complexity.
+A production-deployed full-stack workout logging application focused on backend correctness, data integrity, and realistic domain constraints rather than UI complexity.
 
 Live: https://kevinho.dev/
 Source: https://github.com/kevinhocs/workout-logger
@@ -46,6 +46,8 @@ SQLite database
 - Requests to `/api/*` are proxied to the Express backend running on `localhost:3000`.
 - The Node.js backend runs under PM2 with `NODE_ENV=production`.
 - SQLite persists data locally on the EC2 instance with foreign key enforcement enabled.
+- SQLite is used as a lightweight local database; no external database service is used.
+- Deployment updates are performed manually by pulling from GitHub, rebuilding the frontend (`npm run build`), copying build files to Nginx, and restarting the backend process.
 
 This separation allows Nginx to handle TLS, static file serving, and request routing while the Express application focuses on API logic and database interaction.
 
@@ -68,9 +70,7 @@ The schema is documented in `/docs/data-model.md`.
 ## Structure
 ```
 frontend/ React client
-
 backend/ Express REST API
-
 docs/ Design documentation
 ```
 
