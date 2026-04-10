@@ -6,13 +6,14 @@ export default function WorkoutForm({
   unit,
   fetchLogs,
   currentWorkout,
-  targetWorkoutId,
+  targetWorkout,
   templateExercises,
 }) {
   const { form, errors, setErrors, editingLog, cancelEdit, updateField } =
     formState;
 
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
 
@@ -22,6 +23,7 @@ export default function WorkoutForm({
 
   return (
     <>
+      {error && <div className="error-message">{error}</div>}
       {message && <div className="success-message">{message}</div>}
       {!editingLog && currentWorkout && (
         <div
@@ -38,7 +40,7 @@ export default function WorkoutForm({
           {currentWorkout.date})
         </div>
       )}
-      {!editingLog && !targetWorkoutId && (
+      {!editingLog && !currentWorkout && !targetWorkout && (
         <button
           type="button"
           className="primary"
@@ -46,7 +48,7 @@ export default function WorkoutForm({
             loading ||
             !!currentWorkout ||
             !!editingLog ||
-            !!targetWorkoutId ||
+            !!targetWorkout ||
             !form.date ||
             !form.name ||
             !form.bodyweight
@@ -86,42 +88,70 @@ export default function WorkoutForm({
 
               const data = await res.json();
 
-              console.log("TEMPLATE EXERCISES:", templateExercises);
-
               if (templateExercises?.length) {
                 for (const ex of templateExercises) {
-                  await fetch("/api/logs", {
+                  if (!ex.sets || ex.sets.length === 0) continue;
+
+                  const cleanSets = ex.sets
+                    .filter((s) => s.weight && s.reps)
+                    .map((s) => ({
+                      weight: Number(s.weight),
+                      reps: Number(s.reps),
+                    }));
+
+                  if (cleanSets.length === 0) continue;
+
+                  const res = await fetch("/api/logs", {
                     method: "POST",
                     headers: {
                       "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-                      workout_id: data.id,
+                      workout_id: data.workout_id,
                       exercise: ex.name,
+                      bodyweight:
+                        unit === "kg"
+                          ? Number(form.bodyweight) * 2.20462
+                          : Number(form.bodyweight),
                       notes: ex.notes || null,
-                      sets: ex.sets.map((s) => ({
-                        weight: s.weight,
-                        reps: s.reps,
-                      })),
+                      sets: cleanSets,
                     }),
                   });
+
+                  if (!res.ok) {
+                    const errText = await res.text();
+                    console.error(
+                      "LOG INSERT FAILED:",
+                      ex.name,
+                      cleanSets,
+                      errText,
+                    );
+                  }
                 }
               }
 
               if (!res.ok) {
+                let message = "Failed to create workout.";
+
+                if (data?.error?.includes("UNIQUE constraint failed")) {
+                  message =
+                    "You already have a workout with this name on this date.";
+                }
+
                 console.error("Backend error:", data);
-                throw new Error(data.error || "Failed to create workout");
+                throw new Error(message);
               }
 
               await fetchLogs();
 
+              setError("");
               setMessage("Workout started");
-              setTimeout(() => setMessage(""), 2000);
+              setTimeout(() => setMessage(""), 5000);
               setLoading(false);
             } catch (err) {
               console.error("CREATE WORKOUT ERROR:", err);
-              setMessage(err.message);
-              setTimeout(() => setMessage(""), 2000);
+              setError(err.message);
+              setTimeout(() => setError(""), 5000);
               setLoading(false);
             }
           }}
@@ -152,7 +182,7 @@ export default function WorkoutForm({
             setTimeout(() => setMessage(""), 2000);
           }}
         >
-          End Workout
+          Log Workout
         </button>
       )}
 
@@ -169,7 +199,7 @@ export default function WorkoutForm({
       )}
 
       <div>
-        {!currentWorkout && !editingLog && !targetWorkoutId && (
+        {!currentWorkout && !editingLog && !targetWorkout && (
           <div className="form-stack">
             <div className="field">
               <label>Date</label>

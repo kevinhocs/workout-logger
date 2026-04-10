@@ -15,13 +15,14 @@ export default function SessionList(props) {
     round1,
     toKg,
     canEditPastWorkouts,
-    setTargetWorkoutId,
-    targetWorkoutId,
+    setTargetWorkout,
+    targetWorkout,
     cancelEdit,
     preloadWorkout,
   } = props;
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [localTargetWorkout, setLocalTargetWorkout] = useState(null);
 
   return (
     <>
@@ -64,7 +65,7 @@ export default function SessionList(props) {
                 className="delete-session"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setTargetWorkoutId(session.id);
+                  setLocalTargetWorkout(session);
                   setShowDeleteModal(true);
                 }}
               >
@@ -77,25 +78,26 @@ export default function SessionList(props) {
                 className="add-exercise-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setTargetWorkoutId(session.id);
+                  setTargetWorkout(session);
                 }}
               >
                 + Add Exercise
               </button>
             )}
 
-            {expandedSessions.has(session.id) && (
-              <button
-                className="secondary"
-                onClick={(e) => {
-                  console.log("CLICKED SESSION:", session);
-                  e.stopPropagation();
-                  preloadWorkout(session);
-                }}
-              >
-                Use as Template
-              </button>
-            )}
+            {expandedSessions.has(session.id) &&
+              session.exercises &&
+              session.exercises.length > 0 && (
+                <button
+                  className="secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    preloadWorkout(session);
+                  }}
+                >
+                  Use as Template
+                </button>
+              )}
 
             {expandedSessions.has(session.id) &&
               (session.exercises || []).map((exercise) => (
@@ -172,13 +174,15 @@ export default function SessionList(props) {
         onConfirm={async () => {
           setShowDeleteModal(false);
 
+          if (!localTargetWorkout) {
+            console.error("No workout selected");
+            return;
+          }
+
           try {
-            console.log("Deleting workout:", targetWorkoutId);
-
-            await handleDeleteWorkout(targetWorkoutId);
-
+            await handleDeleteWorkout(localTargetWorkout);
             cancelEdit();
-            setTargetWorkoutId(null);
+            setLocalTargetWorkout(null);
           } catch (err) {
             console.error(err);
             alert("Failed to delete workout.");

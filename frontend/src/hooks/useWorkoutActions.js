@@ -19,9 +19,16 @@ export default function useWorkoutActions({
     }
   };
 
-  const handleDeleteWorkout = async (workoutId) => {
+  const handleDeleteWorkout = async (workout) => {
     try {
-      await deleteWorkout(workoutId);
+      if (Number(workout.completed) === 0) {
+        cancelEdit();
+        await deleteWorkout(workout.id);
+        await fetchLogs();
+        return;
+      }
+
+      await deleteWorkout(workout.id);
       await fetchLogs();
     } catch (err) {
       console.error("Error deleting workout:", err);

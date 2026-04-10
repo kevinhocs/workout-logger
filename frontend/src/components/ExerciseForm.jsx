@@ -1,9 +1,9 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 
 export default function ExerciseForm({
   workoutId,
-  targetWorkoutId,
-  setTargetWorkoutId,
+  targetWorkout,
+  setTargetWorkout,
   unit,
   fetchLogs,
   form,
@@ -16,27 +16,11 @@ export default function ExerciseForm({
   addSet,
   removeSet,
   templateExercises,
+  nextTemplateExercise,
 }) {
   const lastWeightRef = useRef(null);
+  const [error, setError] = useState("");
   const prevLengthRef = useRef(sets.length);
-
-  useEffect(() => {
-    console.log("TEMPLATE IN FORM:", templateExercises);
-
-    if (!templateExercises || templateExercises.length === 0) return;
-
-    const current = templateExercises[0];
-
-    updateField("exercise", current.name);
-
-    setSets(
-      current.sets.map((s) => ({
-        weight: String(s.weight),
-        reps: String(s.reps),
-        notes: "",
-      })),
-    );
-  }, [templateExercises]);
 
   useEffect(() => {
     if (sets.length > prevLengthRef.current) {
@@ -47,7 +31,7 @@ export default function ExerciseForm({
 
   const handleSubmit = async () => {
     if (!form.exercise) {
-      alert("Exercise required");
+      setError("Exercise required");
       return;
     }
 
@@ -106,6 +90,10 @@ export default function ExerciseForm({
       });
       updateSet(0, "notes", "");
 
+      if (nextTemplateExercise) {
+        nextTemplateExercise();
+      }
+
       if (editingLog) {
         setEditingLog(null);
       }
@@ -117,6 +105,7 @@ export default function ExerciseForm({
 
   return (
     <div className="exercise-form">
+      {error && <div className="error-message">{error}</div>}
       <div className="exercise-header">
         <h2>{editingLog ? "Edit Exercise" : "Add Exercise"}</h2>
       </div>
@@ -125,7 +114,10 @@ export default function ExerciseForm({
         <input
           placeholder="Exercise name"
           value={form.exercise || ""}
-          onChange={(e) => updateField("exercise", e.target.value)}
+          onChange={(e) => {
+            updateField("exercise", e.target.value);
+            setError("");
+          }}
         />
 
         <input
@@ -164,11 +156,11 @@ export default function ExerciseForm({
           {editingLog ? "Save Changes" : "Add Exercise"}
         </button>
 
-        {targetWorkoutId && !editingLog && (
+        {targetWorkout && !editingLog && (
           <button
             type="button"
             className="secondary"
-            onClick={() => setTargetWorkoutId(null)}
+            onClick={() => setTargetWorkout(null)}
           >
             Cancel
           </button>

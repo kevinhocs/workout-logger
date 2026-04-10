@@ -507,3 +507,13 @@ button:focus-visible {
   font-size: 1rem;
   font-weight: 600;
 }
+
+.error-message {
+  background: rgba(255, 77, 79, 0.1);
+  border: 1px solid rgba(255, 77, 79, 0.3);
+  padding: 10px;
+  border-radius: 6px;
+  color: #ef4444;
+  margin-bottom: 8px;
+  font-size: 14px;
+}

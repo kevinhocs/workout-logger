@@ -1,5 +1,5 @@
 import "./App.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toKg, round1 } from "./utils/units";
 import SessionList from "./components/SessionList";
 import WorkoutForm from "./components/WorkoutForm";
@@ -15,41 +15,41 @@ export default function WorkoutLog() {
   const activeWorkout = logs.find((w) => Number(w.completed) === 0);
   const [visibleCount, setVisibleCount] = useState(10);
   const [expandedSessions, setExpandedSessions] = useState(new Set());
-  const [targetWorkoutId, setTargetWorkoutId] = useState(null);
+  const [targetWorkout, setTargetWorkout] = useState(null);
   const [templateExercises, setTemplateExercises] = useState([]);
   const [templateIndex, setTemplateIndex] = useState(0);
   const [isTemplateMode, setIsTemplateMode] = useState(false);
 
   const preloadWorkout = (session) => {
-    console.log("PRELOAD SESSION:", session);
-    console.log("FORM AFTER PRELOAD:", formState.form);
-
     if (!session.exercises?.length) {
       alert("No exercises found.");
       return;
     }
 
-    const first = session.exercises[0];
-
     formState.updateField("name", session.name || "");
-
     formState.updateField("date", new Date().toISOString().split("T")[0]);
 
-    formState.updateField("exercise", first.name);
+    setTemplateExercises(session.exercises);
+    setTemplateIndex(0);
+    setIsTemplateMode(true);
+  };
+
+  useEffect(() => {
+    if (!isTemplateMode) return;
+    if (!templateExercises.length) return;
+
+    const current = templateExercises[templateIndex];
+
+    formState.updateField("exercise", current.name);
 
     formState.setSets(
-      first.sets.map((s) => ({
+      current.sets.map((s) => ({
         weight: unit === "kg" ? round1(toKg(s.weight)) : String(s.weight),
         reps: String(s.reps),
         notes: "",
       })),
     );
-
-    setTemplateExercises(session.exercises);
-    setTemplateIndex(0);
-
-    setTargetWorkoutId(null);
-  };
+  }, [templateIndex, templateExercises, isTemplateMode]);
 
   const toggleWeightUnit = () => {
     setUnit((prev) => (prev === "lbs" ? "kg" : "lbs"));
@@ -86,18 +86,30 @@ export default function WorkoutLog() {
         unit={unit}
         fetchLogs={fetchLogs}
         currentWorkout={activeWorkout}
-        targetWorkoutId={targetWorkoutId}
+        targetWorkout={targetWorkout}
+        templateExercises={templateExercises}
       />
 
-      {(activeWorkout || formState.editingLog || targetWorkoutId) && (
+      {(activeWorkout || formState.editingLog || targetWorkout) && (
         <ExerciseForm
           workoutId={
             activeWorkout?.id ||
             formState.editingLog?.workout_id ||
-            targetWorkoutId
+            targetWorkout?.id
           }
-          targetWorkoutId={targetWorkoutId}
-          setTargetWorkoutId={setTargetWorkoutId}
+          nextTemplateExercise={() => {
+            if (!isTemplateMode) return;
+
+            if (templateIndex < templateExercises.length - 1) {
+              setTemplateIndex((prev) => prev + 1);
+            } else {
+              setIsTemplateMode(false);
+              setTemplateExercises([]);
+              setTemplateIndex(0);
+            }
+          }}
+          targetWorkout={targetWorkout}
+          setTargetWorkout={setTargetWorkout}
           unit={unit}
           fetchLogs={fetchLogs}
           form={formState.form}
@@ -130,18 +142,19 @@ export default function WorkoutLog() {
               round1={round1}
               toKg={toKg}
               canEditPastWorkouts={true}
-              setTargetWorkoutId={setTargetWorkoutId}
+              setTargetWorkout={setTargetWorkout}
               preloadWorkout={preloadWorkout}
+              cancelEdit={formState.cancelEdit}
             />
           </>
-        ) : formState.editingLog || targetWorkoutId ? (
+        ) : formState.editingLog || targetWorkout ? (
           <>
             <h2>Editing Workout</h2>
             <SessionList
               logs={logs.filter(
                 (w) =>
                   w.id ===
-                  (formState.editingLog?.workout_id || targetWorkoutId),
+                  (formState.editingLog?.workout_id || targetWorkout?.id),
               )}
               visibleCount={1}
               setVisibleCount={() => {}}
@@ -154,8 +167,8 @@ export default function WorkoutLog() {
               round1={round1}
               toKg={toKg}
               canEditPastWorkouts={true}
-              setTargetWorkoutId={setTargetWorkoutId}
-              targetWorkoutId={targetWorkoutId}
+              setTargetWorkout={setTargetWorkout}
+              targetWorkout={targetWorkout}
               cancelEdit={formState.cancelEdit}
               preloadWorkout={preloadWorkout}
             />
@@ -176,8 +189,10 @@ export default function WorkoutLog() {
               round1={round1}
               toKg={toKg}
               canEditPastWorkouts={true}
-              setTargetWorkoutId={setTargetWorkoutId}
+              setTargetWorkout={setTargetWorkout}
+              targetWorkout={targetWorkout}
               preloadWorkout={preloadWorkout}
+              cancelEdit={formState.cancelEdit}
             />
           </>
         )}
