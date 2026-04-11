@@ -143,7 +143,9 @@ export default function ExerciseForm({
             onChange={(e) => updateSet(i, "reps", e.target.value)}
           />
 
-          <button onClick={() => removeSet(i)}>×</button>
+          <button className="set-remove-btn" onClick={() => removeSet(i)}>
+            ×
+          </button>
         </div>
       ))}
 

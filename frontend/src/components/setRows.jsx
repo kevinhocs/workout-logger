@@ -18,7 +18,7 @@ export default function SetRow({ set, index, unit, updateSet, removeSet }) {
       />
 
       <button type="button" onClick={() => removeSet(index)}>
-        ✕
+        ×
       </button>
     </div>
   );

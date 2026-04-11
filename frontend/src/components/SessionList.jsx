@@ -17,6 +17,8 @@ export default function SessionList(props) {
     canEditPastWorkouts,
     setTargetWorkout,
     targetWorkout,
+    currentWorkout,
+    editingLog,
     cancelEdit,
     preloadWorkout,
   } = props;
@@ -73,19 +75,25 @@ export default function SessionList(props) {
               </button>
             </div>
 
-            {canEditPastWorkouts && expandedSessions.has(session.id) && (
-              <button
-                className="add-exercise-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setTargetWorkout(session);
-                }}
-              >
-                + Add Exercise
-              </button>
-            )}
+            {canEditPastWorkouts &&
+              !currentWorkout &&
+              expandedSessions.has(session.id) && (
+                <button
+                  className="add-exercise-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    cancelEdit();
+                    setTargetWorkout(session);
+                  }}
+                >
+                  + Add Exercise
+                </button>
+              )}
 
-            {expandedSessions.has(session.id) &&
+            {!currentWorkout &&
+              !targetWorkout &&
+              !editingLog &&
+              expandedSessions.has(session.id) &&
               session.exercises &&
               session.exercises.length > 0 && (
                 <button
@@ -113,7 +121,10 @@ export default function SessionList(props) {
                       <div className="exercise-actions">
                         <button
                           className="edit-btn"
-                          onClick={() => startEdit(exercise, session)}
+                          onClick={() => {
+                            setTargetWorkout(null);
+                            startEdit(exercise, session);
+                          }}
                         >
                           Edit
                         </button>
@@ -182,6 +193,7 @@ export default function SessionList(props) {
           try {
             await handleDeleteWorkout(localTargetWorkout);
             cancelEdit();
+            setTargetWorkout(null); 
             setLocalTargetWorkout(null);
           } catch (err) {
             console.error(err);

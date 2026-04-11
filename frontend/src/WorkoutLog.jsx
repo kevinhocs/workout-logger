@@ -145,6 +145,8 @@ export default function WorkoutLog() {
               setTargetWorkout={setTargetWorkout}
               preloadWorkout={preloadWorkout}
               cancelEdit={formState.cancelEdit}
+              currentWorkout={activeWorkout}
+              editingLog={formState.editingLog}
             />
           </>
         ) : formState.editingLog || targetWorkout ? (
@@ -171,6 +173,8 @@ export default function WorkoutLog() {
               targetWorkout={targetWorkout}
               cancelEdit={formState.cancelEdit}
               preloadWorkout={preloadWorkout}
+              currentWorkout={activeWorkout}
+              editingLog={formState.editingLog}
             />
           </>
         ) : (
@@ -193,6 +197,8 @@ export default function WorkoutLog() {
               targetWorkout={targetWorkout}
               preloadWorkout={preloadWorkout}
               cancelEdit={formState.cancelEdit}
+              currentWorkout={activeWorkout}
+              editingLog={formState.editingLog}
             />
           </>
         )}
